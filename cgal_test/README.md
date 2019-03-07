@@ -79,13 +79,13 @@ int main()
 ```
 
 ### Specify different CGAL path
-The command `find_package(CGAL)` in CMakeLists.txt will find CGAL automatically in some default paths. If you want to specify a different CGAL path to build your program, you can set CGAL_DIR in cmake like:
+Set CGAL_DIR in cmake command if you want to use different CGAL path:
+```cmake
+cmake -DCGAL_DIR=/path-to-CGALConfig.cmake-file <your-CMakeLists-path>
 ```
-cmake -DCGAL_DIR=/path-to-CGALConfig.cmake-file ..
-```
-where `CGAL_DIR` is the directory containing the file **CGALConfig.cmake**. This file can be found in the root of CGAL source code folder (generated after configuation beforing compiling CGAL), or inside your CGAL installation path `/CGAL-installation-path/lib/cmake/CGAL`.
+where `CGAL_DIR` is the directory containing the file **CGALConfig.cmake**, such as inside your CGAL installation path `/CGAL-installation-path/lib/cmake/CGAL`.
 
-### Use CGAL CMakeLists.txt generator
+### Use CMakeLists.txt generator for CGAL
 
 There is also a shell-script CGAL CMakeList generator program to use: [https://github.com/CGAL/cgal/blob/master/Scripts/scripts/cgal_create_cmake_script](https://github.com/CGAL/cgal/blob/master/Scripts/scripts/cgal_create_cmake_script). Just run the program to create your own CMakeLists.txt and build from there. See comments for details about usage.
 
