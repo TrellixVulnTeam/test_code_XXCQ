@@ -1,0 +1,33 @@
+# Project: displayList
+# Makefile created by Dev-C++ 4.9.9.2
+
+CPP  = g++.exe
+CC   = gcc.exe
+WINDRES = windres.exe
+RES  = 
+OBJ  = main.o Timer.o $(RES)
+LINKOBJ  = main.o Timer.o $(RES)
+LIBS =  -L"D:/Dev-Cpp/lib" -mwindows -lglut32 -lglu32 -lopengl32 -lwinmm -lgdi32  
+INCS =  -I"D:/Dev-Cpp/include" 
+CXXINCS =  -I"D:/Dev-Cpp/lib/gcc/mingw32/3.4.2/include"  -I"D:/Dev-Cpp/include/c++/3.4.2/backward"  -I"D:/Dev-Cpp/include/c++/3.4.2/mingw32"  -I"D:/Dev-Cpp/include/c++/3.4.2"  -I"D:/Dev-Cpp/include" 
+BIN  = ../bin/displayList.exe
+CXXFLAGS = $(CXXINCS)   -O2
+CFLAGS = $(INCS)   -O2
+RM = rm -f
+
+.PHONY: all all-before all-after clean clean-custom
+
+all: all-before ../bin/displayList.exe all-after
+
+
+clean: clean-custom
+	${RM} $(OBJ) $(BIN)
+
+$(BIN): $(OBJ)
+	$(CPP) $(LINKOBJ) -o "..\bin\displayList.exe" $(LIBS)
+
+main.o: main.cpp
+	$(CPP) -c main.cpp -o main.o $(CXXFLAGS)
+
+Timer.o: Timer.cxx
+	$(CPP) -c Timer.cxx -o Timer.o $(CXXFLAGS)

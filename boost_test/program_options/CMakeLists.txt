@@ -1,0 +1,10 @@
+cmake_minimum_required(VERSION 3.0)
+
+set(Boost_INCLUDE_DIR /usr/local/include)
+set(Boost_LIBRARY_DIR /usr/local/lib)
+find_package(Boost COMPONENTS system filesystem program_options REQUIRED)
+include_directories(${Boost_INCLUDE_DIR})
+link_directories(${Boost_LIBRARY_DIR})
+# message(${Boost_LIBRARIES}) 
+add_executable(program_options program_options.cpp)
+target_link_libraries( program_options ${Boost_LIBRARIES} )
