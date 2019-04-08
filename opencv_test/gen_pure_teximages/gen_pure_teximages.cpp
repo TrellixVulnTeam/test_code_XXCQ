@@ -3,7 +3,6 @@
 */
 /*************************************/
 
-
 #include <iostream>
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgcodecs.hpp>
@@ -12,7 +11,7 @@
 #include <cstdlib>
 #include <time.h>
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     if (argc < 4)
     {

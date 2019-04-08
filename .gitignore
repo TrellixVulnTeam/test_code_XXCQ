@@ -67,6 +67,9 @@ GeneratedFiles/
 Debug
 Release
 
+# Visual Studio Codes
+.vscode
+
 ##############################################################
 # Qtcreator files
 build*Debug
