@@ -1,14 +1,10 @@
-cmake_minimum_required(VERSION 2.8.12)
-
 project(gen_pure_teximages)
+add_executable(${PROJECT_NAME} gen_pure_teximages.cpp)
+target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS})
 
-find_package(OpenCV REQUIRED)
-
-include_directories(${OpenCV_INCLUDE_DIRS})
-include_directories(/usr/include)
-
-link_directories(/usr/lib/x86_64-linux-gnu)
-
-add_executable(gen_pure_teximages gen_pure_teximages.cpp)
-target_link_libraries(gen_pure_teximages ${OpenCV_LIBS} gflags)
-
+set_target_properties(${PROJECT_NAME}
+    PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+)

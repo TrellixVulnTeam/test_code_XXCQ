@@ -1,14 +1,10 @@
-cmake_minimum_required(VERSION 2.8.12)
-
 project(image_basic)
+add_executable(${PROJECT_NAME} image_basic.cpp)
+target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS})
 
-# Use opencv 4.0
-set(OpenCV_DIR /home/chao/dev/opencv-4.0-build/lib/cmake/opencv4)
-
-find_package(OpenCV REQUIRED)
-
-include_directories(${OpenCV_INCLUDE_DIRS})
-
-add_executable(image_basic image_basic.cpp)
-
-target_link_libraries(image_basic ${OpenCV_LIBS})
+set_target_properties(${PROJECT_NAME}
+    PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+)
