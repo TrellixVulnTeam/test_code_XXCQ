@@ -1,9 +1,8 @@
 /*
+  Test function type and function pointer.
 
-	Test function type and function pointer.
-
-	Ref:
-	https://stackoverflow.com/questions/23219227/function-type-vs-function-pointer-type
+  Ref:
+  https://stackoverflow.com/questions/23219227/function-type-vs-function-pointer-type
 
 */
 #include <iostream>
@@ -14,7 +13,7 @@ using namespace std;
 //! C-array as function parameter.
 void sum(int *nums);
 void sum(int nums[]);    // Same as above: array name is actually a pointer to an array
-void sum(int nums[10]);  // Same as above: dimention will be ignored. But this is good for documentation purposes.
+void sum(int nums[10]);  // Same as above: dimension will be ignored. But this is good for documentation purposes.
 
 //! Testing function
 int square(int a)
@@ -51,7 +50,7 @@ void testFunctionPointer()
     // Test function type and function pointers
     decltype(square) f1;  // f1 is a function type
     cout << "type(f1): " << typeid(f1).name() << endl;
-    int f2(int);
+    int f2(int); // f2 is also a function type, and the same as f1
     cout << "type(f2): " << typeid(f2).name() << endl;
 
     // ERROR here: a function name like 'square' is actually a pointer to a function (converted automatically)
@@ -63,9 +62,9 @@ void testFunctionPointer()
     cout << "type(f3): " << typeid(f3).name() << endl;
     f3 = square;  // OK: both are function pointers
     f3(a);        // OK: f3 is a function pointer to square
-    int (*f4)(int) = square; // OK: f4 is a pointer to a function with same type as square
+    int (*f4)(int) = square; // f4 is a function pointer type, same as f3 and 'square'
     cout << "type(f4): " << typeid(f4).name() << endl;
-	f4(a);
+	f4(a); // OK: now f4 is pointing to 'square'
 
     // ERROR: f1 is a function type only instead of a function pointer, so the compiler cannot find what f1 is.
     // takeInFuncType(f1, a);
