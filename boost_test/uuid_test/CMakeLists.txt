@@ -1,5 +1,5 @@
-project(program_options)
-add_executable(${PROJECT_NAME} program_options.cpp)
+project(uuid_test)
+add_executable(${PROJECT_NAME} uuid_test.cpp)
 target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES})
 
 set_target_properties(${PROJECT_NAME}

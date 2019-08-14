@@ -1,10 +1,10 @@
-cmake_minimum_required(VERSION 3.0)
+project(helloworld)
+add_executable(${PROJECT_NAME} helloworld.cpp)
+target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES})
 
-set(Boost_INCLUDE_DIR /usr/local/include)
-set(Boost_LIBRARY_DIR /usr/local/lib)
-find_package(Boost COMPONENTS system filesystem REQUIRED)
-include_directories(${Boost_INCLUDE_DIR})
-link_directories(${Boost_LIBRARY_DIR})
-
-add_executable(helloworld helloworld.cpp)
-target_link_libraries( helloworld ${Boost_LIBRARIES} )
+set_target_properties(${PROJECT_NAME}
+    PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+)
