@@ -40,7 +40,7 @@ std::unique_ptr<Derived> passThrough(std::unique_ptr<Derived> p)
     p->bar();
     return p;
 }
- 
+
 void testUniquePtr()
 {
     std::cout << "unique ownership semantics demo\n";
@@ -125,13 +125,13 @@ void testSharedPtr()
     t3.join();
     std::cout << "All threads completed, the last one deleted Derived\n";
 
-	// Just like the deleter usage in unique_ptr, a common custom function can also work 
+	// Just like the deleter usage in unique_ptr, a common custom function can also work
 	// as a deleter for shared_ptr. Here only shows lambda expression.
 	std::cout << "Custom lambda-expression deleter for shared_ptr\n";
     {
         // Use lambda to create a deleter. Note that unlike the usage of deleter in unique_ptr,
 		// here we don't put the function type in 'std::shared_ptr<Derived>', but only the lambda
-		// expression deleter itself. 
+		// expression deleter itself.
         std::shared_ptr<Derived> q(new Derived, [](Derived* ptr) {
             std::cout << "Destroying shared_ptr resource from a custom deleter ...\n";
             delete ptr;

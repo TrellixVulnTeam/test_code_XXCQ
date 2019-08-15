@@ -5,7 +5,7 @@ VisualStudioVersion = 15.0.28307.421
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "function_pointer", "function_pointer\function_pointer.vcxproj", "{48FCB141-76AF-4CB5-B62A-EA157C12983B}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "smart_pointers", "smart_pointers\smart_pointers.vcxproj", "{36640416-9738-42F8-9343-1728481C0723}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "smart_pointer", "smart_pointer\smart_pointer.vcxproj", "{36640416-9738-42F8-9343-1728481C0723}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "thread_mutex", "thread_mutex\thread_mutex.vcxproj", "{C79E26F3-DBDD-4F22-A68F-A3156CB14A1C}"
 EndProject

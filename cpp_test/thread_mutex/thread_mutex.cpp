@@ -4,11 +4,14 @@
 #include <iostream>
 #include <assert.h>
 #include <chrono>
+#include <functional>
+
 /*!
  * A class that has thread object as member variable
  */
 class ThreadWrapper
 {
+private:
     //! std::thread object
     std::thread threadHandler;
 
