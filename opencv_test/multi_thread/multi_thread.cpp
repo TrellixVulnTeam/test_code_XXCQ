@@ -7,8 +7,6 @@
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/imgproc.hpp"
 
-
-
 void threadFunc(cv::Mat& image, float enhanced_factor, const std::string& outfile)
 {
     cv::Mat enhanced_image;
