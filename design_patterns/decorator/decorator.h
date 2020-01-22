@@ -78,7 +78,7 @@ public:
 
     std::string getDescription() { return coffee_ptr_->getDescription() + ", Decorator - Milk"; }
 
-    double cost() { reteurn coffee_ptr_->cost() + "0.59"; }
+    double cost() { return coffee_ptr_->cost() + 0.59; }
 
 private:
     std::unique_ptr<Coffee> coffee_ptr_;
@@ -94,14 +94,8 @@ public:
 
     std::string getDescription() { return coffee_ptr_->getDescription() + ", Decorator - Mocha"; }
 
-    double cost() { reteurn coffee_ptr_->cost() + "1.20"; }
+    double cost() { return coffee_ptr_->cost() + 1.20; }
 
 private:
     std::unique_ptr<Coffee> coffee_ptr_;
 };
-
-inline void testDecorator()
-{
-    std::unique_ptr<Coffee> coffee_ptr = std::make_unique<HouseBlend>();
-
-}
