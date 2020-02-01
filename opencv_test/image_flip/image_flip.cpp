@@ -9,14 +9,11 @@
 
 namespace ImageUtil {
 
-void flipVert()
-{
-
-}
+void flipVert() {}
 
 bool inPlaceFlip(cv::Mat& image, int flip_mode)
 {
-    if (image.dims() > 2)
+    if (image.dims > 2)
         return false;
     cv::Size size = image.size();
     if (flip_mode < 0)
@@ -59,4 +56,3 @@ int main(int argc, char const* argv[])
 
     return 0;
 }
-

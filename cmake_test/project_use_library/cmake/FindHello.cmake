@@ -15,7 +15,7 @@
 # 寻找头文件
 FIND_PATH(HELLO_INCLUDE_DIR NAMES hello.h PATHS /usr/local /usr/include/hello /usr/local/include/hello)
 # FIND_LIBRARY()找到的是库文件的绝对路径的全名，而不仅仅是包含它的文件夹。
-FIND_LIBRARY(HELLO_LIBRARY NAMES hello PATHS hello_static /usr/local /usr/lib /usr/local/lib)
+FIND_LIBRARY(HELLO_LIBRARY NAMES hello hello_static PATHS /usr/local /usr/lib /usr/local/lib)
 # 下面就是定义一些相关的变量，这些变量在外面的CMakeLists.txt中也可以使用。
 IF (HELLO_INCLUDE_DIR AND HELLO_LIBRARY)
     SET(HELLO_FOUND TRUE)

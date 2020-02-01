@@ -1,0 +1,29 @@
+
+find_path(SOPHUS_INCLUDE_DIR NAMES 
+		sophus/se3.h
+		PATHS
+		${CMAKE_INSTALL_PREFIX}/include
+		${CMAKE_CURRENT_SOURCE_DIR}/../sophus
+        PATH_SUFFIXES sophus)
+
+FIND_LIBRARY(SOPHUS_LIBRARY NAMES 
+        sophus 
+        Sophus
+        PATHS 
+        ${CMAKE_INSTALL_PREFIX}/lib
+        /usr/local
+        /usr/lib
+        /usr/local/lib)
+
+IF(SOPHUS_INCLUDE_DIR AND SOPHUS_LIBRARY)
+	set(SOPHUS_FOUND TRUE)
+ENDIF(SOPHUS_INCLUDE_DIR AND SOPHUS_LIBRARY)
+IF (SOPHUS_FOUND)
+    IF (NOT SOPHUS_FIND_QUIETLY)
+        MESSAGE(STATUS "Found Library Sophus. Headers: ${SOPHUS_INCLUDE_DIR}; Libraries: ${SOPHUS_LIBRARY}")
+    ENDIF (NOT SOPHUS_FIND_QUIETLY)
+ELSE (SOPHUS_FOUND)
+    IF (SOPHUS_FIND_REQUIRED)
+        MESSAGE(FATAL_ERROR "Could not find Sophus library")
+    ENDIF (SOPHUS_FIND_REQUIRED)
+ENDIF (SOPHUS_FOUND)
