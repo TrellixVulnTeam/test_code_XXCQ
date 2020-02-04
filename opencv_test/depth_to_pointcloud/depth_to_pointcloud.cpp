@@ -88,10 +88,9 @@ int main(int argc, char const* argv[])
         for (int j = 0; j < src.cols; ++j)
         {
             unsigned char high = src.at<cv::Vec3b>(i, j)[0];
-            unsigned char low = src.at<cv::Vec3b>(i, j)[0];
+            unsigned char low = src.at<cv::Vec3b>(i, j)[1];
         }
     }
-
     writeout.close();
     return 0;
 }
