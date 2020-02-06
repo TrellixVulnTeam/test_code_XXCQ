@@ -4,7 +4,7 @@ set(PROJECT_NAME g2o_vo)
 
 project(${PROJECT_NAME})
 
-set( CMAKE_CXX_FLAGS "-std=c++11 -O3" )
+set( CMAKE_CXX_FLAGS "-std=c++11 -O3 -Wall" )
 
 # 设定Find模块的目录给接下来FIND_PACKAGE()命令，即FindLibrary.cmake所在的位置
 SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules)
