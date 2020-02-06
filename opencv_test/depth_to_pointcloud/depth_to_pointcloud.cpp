@@ -81,16 +81,34 @@ int main(int argc, char const* argv[])
     }
     std::cout << "Image Type:" << getCvMatType(src.type()) << std::endl;
 
+    const double fx = 326.0, fy = 326.0, cx = 160.0, cy = 120.0;
+    // const double fx =  520.9, fy = 521.0, cx = 325.1, cy = 249.7;
+
+    const double kMaxDepth = 4000;
+    const double kMinDepth = 200;
     std::string xyz_fname = image_name.substr(0, image_name.length() - 4) + ".xyz";
     std::ofstream writeout(xyz_fname, std::ios::trunc);
     for (int i = 0; i < src.rows; ++i)
     {
+        // unsigned char* p = src.ptr<cv::Vec3b>(i); // 先获取每一行开头的指针
         for (int j = 0; j < src.cols; ++j)
         {
-            unsigned char high = src.at<cv::Vec3b>(i, j)[0];
-            unsigned char low = src.at<cv::Vec3b>(i, j)[1];
+            int b = int(src.at<cv::Vec3b>(i, j)[0]);
+            int g = int(src.at<cv::Vec3b>(i, j)[1]);
+            int r = int(src.at<cv::Vec3b>(i, j)[2]);
+            // g = 2;
+            int depth = ((r << 16) | (g << 8)) | b;
+            // double depth = double(src.at<unsigned short>(i, j)) / 5;
+            if (depth > kMaxDepth || depth < kMinDepth)
+                continue;
+            // std::cout << i << "," << j << ": " << b << " " << g << " " << r << " ... " << depth << std::endl;
+            double z = double(depth) / 1000;
+            double x = (i - cx) * z / fx;
+            double y = (j - cy) * z / fy;
+            writeout << x << " " << y << " " << z << std::endl;
         }
     }
     writeout.close();
+
     return 0;
 }
