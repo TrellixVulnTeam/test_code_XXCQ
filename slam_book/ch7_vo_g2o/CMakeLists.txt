@@ -14,10 +14,23 @@ find_package(Eigen3 REQUIRED)
 find_package(G2O REQUIRED)
 
 # message(STATUS "G2O DIR: "${G2O_INCLUDE_DIR})
-# message(STATUS "G2O Library: "${G2O_CORE_LIBRARY} " and " ${G2O_STUFF_LIBRARY})
+# message(STATUS "G2O core: " ${G2O_CORE_LIBRARY})
+# message(STATUS "G2O stuff: " ${G2O_STUFF_LIBRARY})
+# message(STATUS "G2O sba: " ${G2O_TYPES_SBA})
+# message(STATUS "G2O csparse: " ${G2O_SOLVER_CSPARSE})
 
 include_directories(${EIGEN3_INCLUDE_DIR} ${G2O_INCLUDE_DIR} ${OpenCV_INCLUDE_DIRS})
 
 add_executable(${PROJECT_NAME} main.cpp)
 
-target_link_libraries(${PROJECT_NAME} ${G2O_CORE_LIBRARY} ${G2O_STUFF_LIBRARY} ${OpenCV_LIBS})
+
+# set(G2O_LIBRARIES ${G2O_CORE_LIBRARY} ${G2O_STUFF_LIBRARY} ${G2O_TYPES_SBA} ${G2O_SOLVER_CSPARSE} ${G2O_SOLVER_CSPARSE_EXTENSION})
+message(STATUS "G2O_LIBRARIES: " ${G2O_LIBRARIES})
+
+target_link_libraries(${PROJECT_NAME}
+    ${OpenCV_LIBS} 
+    ${G2O_LIBRARIES}
+ )
+
+
+    
