@@ -81,8 +81,8 @@ int main(int argc, char const* argv[])
     }
     std::cout << "Image Type:" << getCvMatType(src.type()) << std::endl;
 
-    const double fx = 326.0, fy = 326.0, cx = 160.0, cy = 120.0;
-    // const double fx =  520.9, fy = 521.0, cx = 325.1, cy = 249.7;
+    // const double fx = 326.0, fy = 326.0, cx = 160.0, cy = 120.0;
+    const double fx =  182.8947, fy = fx, cx = 120, cy = 90;
 
     const double kMaxDepth = 4000;
     const double kMinDepth = 200;

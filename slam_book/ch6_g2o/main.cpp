@@ -150,9 +150,9 @@ int main(int argc, char** argv)
     optimizer.setVerbose(true);      // 打开调试输出
 
     // 往图中增加顶点
-    CurveFittingVertex* v = new CurveFittingVertex();
-    v->setEstimate(Eigen::Vector3d(0, 0, 0));  // 待优化变量的初始值，它不能离全局最优解太远，否则会陷入局部最优
-    v->setId(0);                               // 本问题中我们就1个顶点
+    CurveFittingVertex* vtx= new CurveFittingVertex();
+    vtx->setEstimate(Eigen::Vector3d(0, 0, 0));  // 待优化变量的初始值，它不能离全局最优解太远，否则会陷入局部最优
+    vtx->setId(0);                               // 本问题中我们就1个顶点
     optimizer.addVertex(v);
 
     // 往图中增加边
@@ -160,7 +160,7 @@ int main(int argc, char** argv)
     {
         CurveFittingEdge* edge = new CurveFittingEdge(x_data[i]);  // 定义边的时候把x作为成员变量了
         edge->setId(i);                                            // 每条边有一个id
-        edge->setVertex(0, v);  // 本问题中只有一个顶点，因此每条边都是和自己相连。故，这里无需设置setVertex(1,...)
+        edge->setVertex(0, vtx);  // 本问题中只有一个顶点，因此每条边都是和自己相连。故，这里无需设置setVertex(1,...)
         edge->setMeasurement(y_data[i]);  // 观测值，这里就只有y值了
         // 每一条边都有一个信息矩阵（即e^T\Omega
         // e正中间的\Omega，即协方差矩阵的逆矩阵)，用于平衡不同的测量值变量之间的重要性的。
@@ -178,8 +178,8 @@ int main(int argc, char** argv)
     chrono::duration<double> time_used = chrono::duration_cast<chrono::duration<double>>(t2 - t1);
     cout << "solve time cost = " << time_used.count() << " seconds. " << endl;
 
-    // 输出优化值
-    Eigen::Vector3d abc_estimate = v->estimate();
+    // 优化后的变量依然存放在顶点变量中
+    Eigen::Vector3d abc_estimate = vtx->estimate();
     cout << "estimated model: " << abc_estimate.transpose() << endl;
 
     return 0;

@@ -188,10 +188,9 @@ bool estimate3DPointsByTriangulation(std::vector<cv::Point2d>& pixels1, std::vec
 
 //! 通过解决 PnP 问题（Perspective-n-points）来计算相机位姿，该方法需要已知一批特征点对应的全局三维点的位置
 bool estimatePoseByPnP(cv::Mat& depth_img1, std::vector<cv::Point2d>& pixels1, std::vector<cv::Point2d>& pixels2,
-    cv::Mat& intrinsics, std::vector<double>& distortion, cv::Mat& R_out, cv::Mat& t_out)
+    cv::Mat& intrinsics, std::vector<double>& distortion, std::vector<cv::Point3d>& object_pts_out,
+    std::vector<cv::Point2d>& image_pts_out, cv::Mat& R_out, cv::Mat& t_out)
 {
-    std::vector<cv::Point3d> object_pts;  // 第 1 张图片的特征点对应的全局三维点的坐标
-    std::vector<cv::Point2d> image_pts;   // 第 2 张图片中的二维特征点
     for (size_t i = 0; i < pixels1.size(); ++i)
     {
         unsigned short depth = depth_img1.at<unsigned short>(int(pixels1[i].x), int(pixels1[i].y));
@@ -199,28 +198,28 @@ bool estimatePoseByPnP(cv::Mat& depth_img1, std::vector<cv::Point2d>& pixels1, s
         if (z < 0.1 || z > 6.0)                // 深度值过小或者过大都不准确，舍弃它们
             continue;
         cv::Point2d pt = pixelToCameraNormalizedPoint(pixels1[i], intrinsics);
-        object_pts.push_back(cv::Point3d(pt.x * z, pt.y * z, z));
-        image_pts.push_back(pixels2[i]);
+        // 可以看出，所用的全局三维点就是二维特征点对应的三维点，深度直接从深度图片得到。
+        object_pts_out.push_back(cv::Point3d(pt.x * z, pt.y * z, z));
+        image_pts_out.push_back(pixels2[i]);
     }
-    if (object_pts.size() < 4)  // 通常 PnP 方法至少需要 4 个特征点对
+    if (object_pts_out.size() < 4)  // 通常 PnP 方法至少需要 4 个特征点对
         return false;
 
-    std::cout << "#3D points: " << object_pts.size() << ", #Original Features: " << pixels1.size() << std::endl;
+    std::cout << "#3D points: " << object_pts_out.size() << ", #Original Features: " << pixels1.size() << std::endl;
 
     // 使用 EPNP 方法解决 PnP问题。几个注意点：
-    // - 第 4 个参数的 intrinsics 可以使空矩阵 cv::Mat()，这样的话默认 distortion 参数全是 0；
-    // - 输出的旋转是 Axis-Angle 形式的旋转向量（即，向量方向是转轴，长度是转角）
+    // - 第 4 个参数是相机畸变（distortion），它可以是空的（Mat 或者 vector），这样的话默认参数全是 0；
+    // - 输出的旋转是 Axis-Angle 形式的旋转向量（即，向量方向是转轴，长度是转角）。因此需要多增加一步转换。
     cv::Mat r;
-    cv::solvePnP(object_pts, image_pts, intrinsics, distortion, r, t_out, false, cv::SOLVEPNP_EPNP);
+    cv::solvePnP(object_pts_out, image_pts_out, intrinsics, distortion, r, t_out, false, cv::SOLVEPNP_EPNP);
     // 调用罗德里格斯公式转换得到最终的旋转阵
     cv::Rodrigues(r, R_out);
-
     return true;
 }
 
 //! 使用 BA 优化三维点和相机位姿。注意它只优化了第 2 张图片的位姿，因为此时认为第 1 张图片位姿就是默认
 //! 的单位阵，无需优化。因此，这里的 pixels 也是第 2 张图片的特征点。
-void bundleAdjustment(std::vector<cv::Point2d>& pixels, cv::Mat& intrinsics, std::vector<cv::Point3d>& points3d_in_out,
+void bundleAdjustment(cv::Mat& intrinsics, std::vector<cv::Point2d>& pixels, std::vector<cv::Point3d>& points3d_in_out,
     cv::Mat& R_in_out, cv::Mat& t_in_out)
 {
     // BlockSolver_6_3 是 g2o 中已经定义了的 pose 维度是 6 且 landmark 维度（即误差项）是 3 的类型。
@@ -234,20 +233,73 @@ void bundleAdjustment(std::vector<cv::Point2d>& pixels, cv::Mat& intrinsics, std
     optimizer.setAlgorithm(solver);
     optimizer.setVerbose(true);
 
-    // g2o 需要 Eigen 格式的输入
+    // 添加相机参数
+    // 参数第 1 个 focal length，第 2 个是 (cx, cy)，第 3 个是 baseline（这是双目相机的参数，本问题暂时没有，设置成 0）
+    g2o::CameraParameters* camera = new g2o::CameraParameters(
+        intrinsics.at<double>(0, 0), Eigen::Vector2d(intrinsics.at<double>(0, 2), intrinsics.at<double>(1, 2)), 0);
+    camera->setId(0);
+    optimizer.addParameter(camera);
+
+    // 一个顶点是相机位姿
+    // g2o 的 pose 类型需要 Eigen 格式的输入
     Eigen::Matrix3d R_mat;
     for (int i = 0; i < 3; ++i)
     {
         for (int j = 0; j < 3; ++j)
             R_mat(i, j) = R_in_out.at<double>(i, j);
     }
-    // 一个顶点是相机位姿
-    g2o::VertexSE3Expmap* vertex_pose = new g2o::VertexSE3Expmap();
-    vertex_pose->setId(0);
-    g2o::SE3Quat pose(
+    g2o::VertexSE3Expmap* pose = new g2o::VertexSE3Expmap();
+    pose->setId(0);
+    g2o::SE3Quat pose_se3(
         R_mat, Eigen::Vector3d(t_in_out.at<double>(0, 0), t_in_out.at<double>(1, 0), t_in_out.at<double>(2, 0)));
-    vertex_pose->setEstimate(pose);
-    optimizer.addVertex(vertex_pose);
+    pose->setEstimate(pose_se3);  // 初始值
+    optimizer.addVertex(pose);
+
+    // 添加其他顶点，每个顶点是一个三维空间点的位置。这里把添加边也放在一起了，因为本问题中，一个三维点就对应了一个误差项，即一条边。这样更方便
+    int v_idx = 1;  // 注意：第 0 个顶点是相机位姿，因此三维点对应的顶点的 index 从 1 开始
+    for (int i = 0; i < int(points3d_in_out.size()); ++i)
+    {
+        g2o::VertexSBAPointXYZ* pt3d = new g2o::VertexSBAPointXYZ();
+        pt3d->setId(v_idx);
+        pt3d->setEstimate(Eigen::Vector3d(points3d_in_out[i].x, points3d_in_out[i].y, points3d_in_out[i].z));  // 初始值
+        pt3d->setMarginalized(true);
+        optimizer.addVertex(pt3d);
+
+        g2o::EdgeProjectXYZ2UV* edge = new g2o::EdgeProjectXYZ2UV();
+        edge->setId(v_idx);
+        // 一个误差项有两个顶点（即两个待优化的未知数的 blocks），一个是相机位姿，另一个是三维点。
+        edge->setVertex(0, dynamic_cast<g2o::VertexSBAPointXYZ*>(optimizer.vertex(v_idx)));
+        // 本题很简单，位姿就一个，因此每条边的另一个顶点是同一个 pose。如果是复杂的多帧 BA 问题，那么通常
+        // 要提前确定每一帧和可见的（visible）三维点的对应关系。
+        edge->setVertex(1, pose);
+        edge->setParameterId(0, 0);  // 不知道做什么的，不过默认输入参数基本都是 0, 0
+        // 测量值就是二维特征点位置（注意，二维特征点 pixels 和全局三维点 points3d_in_out 元素是一一对应的）
+        edge->setMeasurement(Eigen::Vector2d(pixels[i].x, pixels[i].y));
+        // 误差项表达式正中间的那个信息矩阵，很多时候就是单位阵，维度和误差项维度相同。这里就是 2x2 的
+        edge->setInformation(Eigen::Matrix2d::Identity());
+        optimizer.addEdge(edge);
+        v_idx++;
+    }
+
+    // 开始优化
+    std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+    optimizer.initializeOptimization();
+    optimizer.optimize(100);  // 参数是迭代次数
+    std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
+    std::chrono::duration<double> time_used = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
+
+    // 输出结果。
+    Eigen::MatrixXd T = Eigen::Isometry3d(pose->estimate()).matrix();
+    for (int i = 0; i < 3; ++i)
+    {
+        for (int j = 0; j < 3; ++j)
+            R_in_out.at<double>(i, j) = T(i, j);
+        t_in_out.at<double>(i, 0) = T(i, 3);
+    }
+    std::cout << "Time: " << time_used.count() << std::endl;
+    std::cout << "After optimization: " << std::endl;
+    std::cout << "R: " << std::endl << R_in_out << std::endl;
+    std::cout << "t: " << std::endl << t_in_out << std::endl;
 }
 
 int main(int argc, char** argv)
@@ -289,11 +341,10 @@ int main(int argc, char** argv)
     // 相机的畸变（distortion）系数，来自同一个 dataset
     std::vector<double> distortion = {0.2312, -0.7849, -0.0033, -0.0001, 0.9172};
 
+    // 特征值匹配
     std::vector<cv::KeyPoint> keypoints1;
     std::vector<cv::KeyPoint> keypoints2;
     std::vector<cv::DMatch> matches;
-
-    // 特征值匹配
     if (!runFeatureMatching(color_img1, color_img2, keypoints1, keypoints2, matches, false))
     {
         std::cout << "Incorrect feature matching with only " << matches.size() << " pairs of feature points"
@@ -335,7 +386,10 @@ int main(int argc, char** argv)
     // 第二种方法：通过解决 PnP 问题来计算相机位姿
     cv::Mat R_pnp;
     cv::Mat t_pnp;
-    if (!estimatePoseByPnP(depth_img1, pixels1, pixels2, intrinsics, distortion, R_pnp, t_pnp))
+    // 下面这两个参数在之后的 Bundle Adjustment 要用，因此作为 PnP 函数的输出
+    std::vector<cv::Point3d> object_pts;  // 第 1 张图片的特征点对应的全局三维点的坐标
+    std::vector<cv::Point2d> image_pts;   // 第 2 张图片中的二维特征点
+    if (!estimatePoseByPnP(depth_img1, pixels1, pixels2, intrinsics, distortion, object_pts, image_pts, R_pnp, t_pnp))
     {
         std::cout << "PnP failed!" << std::endl;
         return -1;
@@ -345,8 +399,9 @@ int main(int argc, char** argv)
     std::cout << "t_pnp: " << std::endl << t_pnp << std::endl;
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    // 最后，使用 Bundle Adjustment（BA）来进一步优化相机位姿和三维空间点。BA 使用之前得到的相机位姿和
-    // 三维空间点作为初始值
+    // 最后，使用 Bundle Adjustment（BA）来进一步优化相机位姿和三维空间点。BA 使用之前 PnP 方法得到的相机位姿和
+    // 对应的三维空间点作为初始值
+    bundleAdjustment(intrinsics, image_pts, object_pts, R_pnp, t_pnp);
 
     return 0;
 }
