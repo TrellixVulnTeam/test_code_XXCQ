@@ -31,14 +31,14 @@ int main(int argc, char **argv)
     google::InitGoogleLogging(argv[0]);
 
     double a = 1.0, b = 2.0, c = 1.0;
-    double abc[3] = {0, 0, 0};  // 待估计的3个参数
-    const int kNumPoints = 100;
+    double abc[3] = {0, 0, 0};  // 待优化的3个参数以及初始值，它不能离全局最优解太远，否则会陷入局部最优
+    const int kNumPoints = 10000;
 
     // 设置高斯噪声生成器。这里使用STL中的normal_distribution类
     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
     std::default_random_engine generator(seed);  // 使用时间作为seed，否则生成的随机数在每次程序运行都是一批相同的数
-    double kNoiseSigma = 1.0;  // 噪声的标准差Standard Deviation
-    std::normal_distribution<double> dist(0, kNoiseSigma); // 第1个参数是mean，第2个是标准差
+    double kNoiseSigma = 1.0;                               // 噪声的标准差Standard Deviation
+    std::normal_distribution<double> dist(0, kNoiseSigma);  // 第1个参数是mean，第2个是标准差
     // cv::RNG rng;               // OpenCV的随机数
 
     // 随机生成一些有噪声的点对
@@ -77,7 +77,7 @@ int main(int argc, char **argv)
             new ceres::AutoDiffCostFunction<CostFunctor, 1, 3>(new CostFunctor(x_data[i], y_data[i]));
 
         // 将cost function、核函数和待计算的未知数变量传入。这里第2个参数是核函数LossFunction，
-        // 这里暂时是空，因为这里我们根本没用核函数。
+        // 这里暂时是空，因为这里我们根本没用核函数。第3个参数是该误差项对应的优化变量的block，这里我们就一个 block。
         problem.AddResidualBlock(cost_function, nullptr, abc);
     }
 

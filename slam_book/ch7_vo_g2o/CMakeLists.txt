@@ -23,14 +23,10 @@ include_directories(${EIGEN3_INCLUDE_DIR} ${G2O_INCLUDE_DIR} ${OpenCV_INCLUDE_DI
 
 add_executable(${PROJECT_NAME} main.cpp)
 
-
-# set(G2O_LIBRARIES ${G2O_CORE_LIBRARY} ${G2O_STUFF_LIBRARY} ${G2O_TYPES_SBA} ${G2O_SOLVER_CSPARSE} ${G2O_SOLVER_CSPARSE_EXTENSION})
-message(STATUS "G2O_LIBRARIES: " ${G2O_LIBRARIES})
-
 target_link_libraries(${PROJECT_NAME}
     ${OpenCV_LIBS} 
     ${G2O_LIBRARIES}
- )
+)
 
 
     

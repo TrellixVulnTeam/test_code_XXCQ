@@ -4,6 +4,16 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/calib3d.hpp>
 #include <vector>
+#include "g2o/core/sparse_optimizer.h"
+#include "g2o/core/block_solver.h"
+#include "g2o/core/solver.h"
+#include "g2o/core/robust_kernel_impl.h"
+#include "g2o/core/optimization_algorithm_levenberg.h"
+#include "g2o/solvers/cholmod/linear_solver_cholmod.h"
+#include "g2o/solvers/dense/linear_solver_dense.h"
+#include "g2o/types/sba/types_six_dof_expmap.h"
+#include "g2o/solvers/structure_only/structure_only_solver.h"
+#include "g2o/solvers/csparse/linear_solver_csparse.h"
 
 // TUM RGB-D 深度图的深度值的 scale factor，深度值除以它就是真正的以米为单位的深度值
 const double kDepthScaleFactor = 5000.0;
@@ -208,6 +218,38 @@ bool estimatePoseByPnP(cv::Mat& depth_img1, std::vector<cv::Point2d>& pixels1, s
     return true;
 }
 
+//! 使用 BA 优化三维点和相机位姿。注意它只优化了第 2 张图片的位姿，因为此时认为第 1 张图片位姿就是默认
+//! 的单位阵，无需优化。因此，这里的 pixels 也是第 2 张图片的特征点。
+void bundleAdjustment(std::vector<cv::Point2d>& pixels, cv::Mat& intrinsics, std::vector<cv::Point3d>& points3d_in_out,
+    cv::Mat& R_in_out, cv::Mat& t_in_out)
+{
+    // BlockSolver_6_3 是 g2o 中已经定义了的 pose 维度是 6 且 landmark 维度（即误差项）是 3 的类型。
+    // BA 问题中，Jacobi 矩阵“通常”是稀疏阵。不过这里也可以用 LinearSolverCholmod 等
+    std::unique_ptr<g2o::BlockSolver_6_3::LinearSolverType> linearSolver =
+        g2o::make_unique<g2o::LinearSolverCSparse<g2o::BlockSolver_6_3::PoseMatrixType>>();
+    g2o::OptimizationAlgorithmLevenberg* solver =
+        new g2o::OptimizationAlgorithmLevenberg(g2o::make_unique<g2o::BlockSolver_6_3>(std::move(linearSolver)));
+
+    g2o::SparseOptimizer optimizer;
+    optimizer.setAlgorithm(solver);
+    optimizer.setVerbose(true);
+
+    // g2o 需要 Eigen 格式的输入
+    Eigen::Matrix3d R_mat;
+    for (int i = 0; i < 3; ++i)
+    {
+        for (int j = 0; j < 3; ++j)
+            R_mat(i, j) = R_in_out.at<double>(i, j);
+    }
+    // 一个顶点是相机位姿
+    g2o::VertexSE3Expmap* vertex_pose = new g2o::VertexSE3Expmap();
+    vertex_pose->setId(0);
+    g2o::SE3Quat pose(
+        R_mat, Eigen::Vector3d(t_in_out.at<double>(0, 0), t_in_out.at<double>(1, 0), t_in_out.at<double>(2, 0)));
+    vertex_pose->setEstimate(pose);
+    optimizer.addVertex(vertex_pose);
+}
+
 int main(int argc, char** argv)
 {
     if (argc != 5)
@@ -267,7 +309,9 @@ int main(int argc, char** argv)
         pixels2.push_back(keypoints2[mt.trainIdx].pt);  // train 指代第 2 张图片，被弄混了
     }
 
-    // 使用对极几何 Epipolar geometry 方法（Essential matrix）估计 camera pose
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // 第一种方法： 使用单目 SLAM 的对极几何方法（Epipolar geometry）来估计相机位姿。
+    // 注意，此时只用到了彩色图片（的特征点）信息，没有使用深度信息
     cv::Mat R;  // rotation
     cv::Mat t;  // translation
     if (!estimatePoseEpipolar(pixels1, pixels2, intrinsics, R, t))
@@ -275,11 +319,11 @@ int main(int argc, char** argv)
         std::cout << "Epipolar pose estimation failed!" << std::endl;
         return -1;
     }
-    // 这里的 R 基本准确，但是 t 是不准确的，因为只有单目 SLAM 得到的位移的单位未知
+    // 这里的 R 基本准确，但是 t 是不准确的，因为单目 SLAM 中无法确定位移以及空间点坐标的单位
     std::cout << "R: " << std::endl << R << std::endl;
     std::cout << "t: " << std::endl << t << std::endl;
 
-    // 使用三角测量来计算空间点位置
+    // 基于对极几何得到的 R 和 t，使用三角测量法来计算空间点位置。同样的，空间点坐标的单位是未知的。
     std::vector<cv::Point3d> points3d;
     if (!estimate3DPointsByTriangulation(pixels1, pixels2, intrinsics, R, t, points3d))
     {
@@ -287,7 +331,8 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    // 通过解决 PnP 问题来计算相机位姿
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // 第二种方法：通过解决 PnP 问题来计算相机位姿
     cv::Mat R_pnp;
     cv::Mat t_pnp;
     if (!estimatePoseByPnP(depth_img1, pixels1, pixels2, intrinsics, distortion, R_pnp, t_pnp))
@@ -295,8 +340,13 @@ int main(int argc, char** argv)
         std::cout << "PnP failed!" << std::endl;
         return -1;
     }
+    // 和上面的单目 SLAM 相比，这里的 R 应该接近，但是 t 会不一样，因为 PnP 中使用了深度信息
     std::cout << "R_pnp: " << std::endl << R_pnp << std::endl;
     std::cout << "t_pnp: " << std::endl << t_pnp << std::endl;
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // 最后，使用 Bundle Adjustment（BA）来进一步优化相机位姿和三维空间点。BA 使用之前得到的相机位姿和
+    // 三维空间点作为初始值
 
     return 0;
 }

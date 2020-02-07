@@ -14,7 +14,8 @@
 using namespace std;
 
 //! 顶点/节点//超点。顶点记录的是属于同一个block的未知数变量。通常一个block指的是，它包含的几个未知数是在一起被估计的，例如一个二次方程中的几个参数，
-//! 或者一个camera pose或者一个三维空间点。实现时，它必须继承自BaseVertex表示最普通的顶点类型。BaseVertex中定义了4个子类必须要定义的纯虚函数。
+//! 或者一个camera
+//! pose或者一个三维空间点。实现时，它必须继承自BaseVertex表示最普通的顶点类型。BaseVertex中定义了4个子类必须要定义的纯虚函数。
 /*! BaseVertex模板参数：
     - 第1个参数是每个节点中待优化变量的维度（本问题中要优化3个变量）；
     - 第2个是盛放这些变量的数据类型。
@@ -104,7 +105,6 @@ int main(int argc, char** argv)
     double a = 1.0, b = 2.0, c = 1.0;           // 真实参数值
     int N = (argc == 1) ? 100 : atoi(argv[1]);  // 数据点个数
     double w_sigma = 2.0;                       // 噪声的标准差，即sigma
-    double abc[3] = {0, 0, 0};                  // 待估计的参数abc
 
     // 设置高斯噪声生成器。这里使用STL中的normal_distribution类
     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
@@ -131,7 +131,8 @@ int main(int argc, char** argv)
        Block::LinearSolverType* linearSolver = new g2o::LinearSolverDense<Block::PoseMatrixType>();  // 线性方程求解器
        Block* solver_ptr = new Block(linearSolver);                                                  // 矩阵块求解器
     */
-    // MyBlockSolver永远会固定成下面这句的样子不会变化（当然g2o已经有一些typedef定义了常见的几个类型）
+    // 一般 general 问题中 MyBlockSolver 是固定成下面这句的样子。当然 g2o 已经有一些 typedef 定义了常见的几个类型供类似
+    // BA 问题使用
     typedef g2o::BlockSolver<g2o::BlockSolverTraits<Eigen::Dynamic, Eigen::Dynamic>> MyBlockSolver;
     // 这里使用Dense Solver，同理还有稀疏阵类型LinearSolverSparse，通常用于BA等问题的优化
     typedef g2o::LinearSolverDense<MyBlockSolver::PoseMatrixType> MyLinearSolver;  // 嵌套了上面的BlockSolver
@@ -181,7 +182,5 @@ int main(int argc, char** argv)
     Eigen::Vector3d abc_estimate = v->estimate();
     cout << "estimated model: " << abc_estimate.transpose() << endl;
 
-    int *aaa = new int(5);
-    aaa = 0;
     return 0;
 }
