@@ -233,14 +233,15 @@ void bundleAdjustment(cv::Mat& intrinsics, std::vector<cv::Point2d>& pixels, std
     optimizer.setAlgorithm(solver);
     optimizer.setVerbose(true);
 
-    // 添加相机参数
+    // 添加相机参数。添加参数这一步也可以放在添加顶点之后。不过添加边必须放在添加顶点之后，因为每条边要指定其两个顶点。
     // 参数第 1 个 focal length，第 2 个是 (cx, cy)，第 3 个是 baseline（这是双目相机的参数，本问题暂时没有，设置成 0）
     g2o::CameraParameters* camera = new g2o::CameraParameters(
         intrinsics.at<double>(0, 0), Eigen::Vector2d(intrinsics.at<double>(0, 2), intrinsics.at<double>(1, 2)), 0);
     camera->setId(0);
     optimizer.addParameter(camera);
 
-    // 一个顶点是相机位姿
+    // 一个顶点是相机位姿。注意，这里我们无需定义三维点是如何更新的（即 Jacobi 矩阵的计算之类的），因为 g2o
+    // 的这些类中已经给定义好了。 
     // g2o 的 pose 类型需要 Eigen 格式的输入
     Eigen::Matrix3d R_mat;
     for (int i = 0; i < 3; ++i)
@@ -255,19 +256,22 @@ void bundleAdjustment(cv::Mat& intrinsics, std::vector<cv::Point2d>& pixels, std
     pose->setEstimate(pose_se3);  // 初始值
     optimizer.addVertex(pose);
 
-    // 添加其他顶点，每个顶点是一个三维空间点的位置。这里把添加边也放在一起了，因为本问题中，一个三维点就对应了一个误差项，即一条边。这样更方便
+    // 添加其他顶点和边。
     int v_idx = 1;  // 注意：第 0 个顶点是相机位姿，因此三维点对应的顶点的 index 从 1 开始
     for (int i = 0; i < int(points3d_in_out.size()); ++i)
     {
+        // 每个顶点是一个三维空间点的位置。和上面的 pose 类一样，这里我们也无需定义三维点是如何更新的（即 Jacobi
+        // 矩阵的计算之类的），因为 g2o 的这些类中已经给定义好了。
         g2o::VertexSBAPointXYZ* pt3d = new g2o::VertexSBAPointXYZ();
         pt3d->setId(v_idx);
         pt3d->setEstimate(Eigen::Vector3d(points3d_in_out[i].x, points3d_in_out[i].y, points3d_in_out[i].z));  // 初始值
         pt3d->setMarginalized(true);
         optimizer.addVertex(pt3d);
 
+        // 添加边。一个误差项就是一条边。这里把添加边也放在一起了，因为本问题中，一个三维点就对应了一个误差项，即三维点个数就是边的个数
         g2o::EdgeProjectXYZ2UV* edge = new g2o::EdgeProjectXYZ2UV();
         edge->setId(v_idx);
-        // 一个误差项有两个顶点（即两个待优化的未知数的 blocks），一个是相机位姿，另一个是三维点。
+        // 每个误差项有两个顶点（即两个待优化的未知数的 blocks），一个是相机位姿，另一个是三维点。
         edge->setVertex(0, dynamic_cast<g2o::VertexSBAPointXYZ*>(optimizer.vertex(v_idx)));
         // 本题很简单，位姿就一个，因此每条边的另一个顶点是同一个 pose。如果是复杂的多帧 BA 问题，那么通常
         // 要提前确定每一帧和可见的（visible）三维点的对应关系。
