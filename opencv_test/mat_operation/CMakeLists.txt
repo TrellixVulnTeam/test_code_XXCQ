@@ -1,5 +1,5 @@
-project(3d_mat)
-add_executable(${PROJECT_NAME} 3d_mat.cpp)
+project(mat_operation)
+add_executable(${PROJECT_NAME} mat_operation.cpp)
 target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS})
 
 set_target_properties(${PROJECT_NAME}

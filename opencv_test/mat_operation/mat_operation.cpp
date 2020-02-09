@@ -3,26 +3,15 @@
 #include <string>
 #include <vector>
 
-#include "opencv2/highgui.hpp"
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/imgproc.hpp"
+#include <opencv2/core/core.hpp>
+#include <opencv2/features2d/features2d.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/calib3d.hpp>
+
 
 int main(int argc, char const *argv[])
 {
-    if (argc != 2)
-    {
-        std::cout << "Usage: 3d_mat input_image" << std::endl;
-        return -1;
-    }
-
-    std::string image_name(argv[1]);
-    cv::Mat src = cv::imread(image_name, cv::IMREAD_GRAYSCALE);
-    if (!src.data)
-    {
-        std::cout << "Cannot read image " << image_name << "!" << std::endl;
-        return -1;
-    }
-
+    cv::Mat src = cv::Mat(10, 8, CV_8UC1, cv::Scalar(0));
     src.convertTo(src, CV_32F);
     cv::Mat1f dev;  // 1 channel float mat
     int n = 10, m = 2;

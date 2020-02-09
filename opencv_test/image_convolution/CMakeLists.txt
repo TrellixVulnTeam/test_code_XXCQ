@@ -1,5 +1,5 @@
-project(image_flip)
-add_executable(${PROJECT_NAME} image_flip.cpp)
+project(image_convolution)
+add_executable(${PROJECT_NAME} image_convolution.cpp)
 target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS})
 
 set_target_properties(${PROJECT_NAME}
