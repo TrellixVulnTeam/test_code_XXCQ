@@ -106,7 +106,7 @@ bool convolve2DSeparable(
         offset++;
     }
     // 中间区间 [hx, rows - hx - 1]。做法和上边界区间很类似。
-    float* ptr_init = tmp;
+    float* ptr_init = ptr_tmp; // 拷贝一份初始指针
     for (int i = up_border; i < bottom_border; ++i)
     {
         for (int k = sizeX - 1; k >= 0; k--)
@@ -119,9 +119,9 @@ bool convolve2DSeparable(
         }
         for (int j = 0; j < cols; ++j)
         {
-            *ptr_out = (unsigned char)(sum[j]);  // 这里其实默认将 float 转成了 unsigned char
+            *ptr_out = sum[j];
             ptr_out++;
-            sum[j] = 0;  // 记得清零供下次使用
+            sum[j] = 0; 
         }
         ptr_init += cols;  // 左上角指针要向下移动一行
         ptr_tmp = ptr_init;
@@ -140,12 +140,12 @@ bool convolve2DSeparable(
         }
         for (int j = 0; j < cols; ++j)
         {
-            *ptr_out = (unsigned char)(sum[j]);  // 这里其实默认将 float 转成了 unsigned char
+            *ptr_out = sum[j];
             ptr_out++;
-            sum[j] = 0;  // 记得清零供下次使用
+            sum[j] = 0;
         }
         offset++;
-        ptr_init += cols;  // 左上角指针要向下移动一行
+        ptr_init += cols;
         ptr_tmp = ptr_init;
     }
     // 最后记得释放内存
