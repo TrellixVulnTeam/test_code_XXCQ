@@ -1,4 +1,5 @@
 #include <iostream>
+
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -219,8 +220,8 @@ bool estimatePoseByPnP(cv::Mat& depth_img1, std::vector<cv::Point2d>& pixels1, s
 
 //! 使用 BA 优化三维点和相机位姿。注意它只优化了第 2 张图片的位姿，因为此时认为第 1 张图片位姿就是默认
 //! 的单位阵，无需优化。因此，这里的 pixels 也是第 2 张图片的特征点。
-void bundleAdjustment(cv::Mat& intrinsics, std::vector<cv::Point2d>& pixels, std::vector<cv::Point3d>& points3d_in_out,
-    cv::Mat& R_in_out, cv::Mat& t_in_out)
+void runBundleAdjustment(cv::Mat& intrinsics, std::vector<cv::Point2d>& pixels,
+    std::vector<cv::Point3d>& points3d_in_out, cv::Mat& R_in_out, cv::Mat& t_in_out)
 {
     // BlockSolver_6_3 是 g2o 中已经定义了的 pose 维度是 6 且 landmark 维度（即误差项）是 3 的类型。
     // BA 问题中，Jacobi 矩阵“通常”是稀疏阵。不过这里也可以用 LinearSolverCholmod 等
@@ -241,7 +242,7 @@ void bundleAdjustment(cv::Mat& intrinsics, std::vector<cv::Point2d>& pixels, std
     optimizer.addParameter(camera);
 
     // 一个顶点是相机位姿。注意，这里我们无需定义三维点是如何更新的（即 Jacobi 矩阵的计算之类的），因为 g2o
-    // 的这些类中已经给定义好了。 
+    // 的这些类中已经给定义好了。
     // g2o 的 pose 类型需要 Eigen 格式的输入
     Eigen::Matrix3d R_mat;
     for (int i = 0; i < 3; ++i)
@@ -405,7 +406,6 @@ int main(int argc, char** argv)
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     // 最后，使用 Bundle Adjustment（BA）来进一步优化相机位姿和三维空间点。BA 使用之前 PnP 方法得到的相机位姿和
     // 对应的三维空间点作为初始值
-    bundleAdjustment(intrinsics, image_pts, object_pts, R_pnp, t_pnp);
-
+    runBundleAdjustment(intrinsics, image_pts, object_pts, R_pnp, t_pnp);
     return 0;
 }
