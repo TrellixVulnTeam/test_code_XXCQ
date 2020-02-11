@@ -150,7 +150,7 @@ int main(int argc, char** argv)
     optimizer.setVerbose(true);      // 打开调试输出
 
     // 往图中增加顶点
-    CurveFittingVertex* vtx= new CurveFittingVertex();
+    CurveFittingVertex* vtx = new CurveFittingVertex();
     vtx->setEstimate(Eigen::Vector3d(0, 0, 0));  // 待优化变量的初始值，它不能离全局最优解太远，否则会陷入局部最优
     vtx->setId(0);                               // 本问题中我们就1个顶点
     optimizer.addVertex(vtx);
