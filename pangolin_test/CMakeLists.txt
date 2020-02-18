@@ -7,10 +7,11 @@ set (CMAKE_CXX_STANDARD 14)
 
 project(${PROJECT_NAME})
 
+find_package(Eigen3 REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(Pangolin 0.4 REQUIRED)
 
-include_directories(${Pangolin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
+include_directories(${Pangolin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS} ${${EIGEN3_INCLUDE_DIR}})
 
-add_executable(${PROJECT_NAME} rgbdparser.cpp)
+add_executable(${PROJECT_NAME} rgbd_processor.cpp main.cpp)
 target_link_libraries(${PROJECT_NAME} ${Pangolin_LIBRARIES} ${OpenCV_LIBS})

@@ -4,39 +4,26 @@
 
 #include <pangolin/pangolin.h>
 
-#include "opencv2/highgui.hpp"
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/imgproc.hpp"
-
-void setImageData(unsigned char* imageArray, int size)
-{
-    for (int i = 0; i < size; i++)
-    {
-        imageArray[i] = (unsigned char)(rand() / (RAND_MAX / 255.0));
-    }
-}
+#include "rgbd_processor.h"
 
 int main(int argc, char* argv[])
 {
-    if (argc != 2)
+    if (argc != 4)
     {
-        std::cout << "Usage: image_basic <bundlefusion_rgbd_folder>" << std::endl;
+        std::cout << "Usage: program bundlefusion_rgbd_folder start_frame_index end_frame_index" << std::endl;
+        std::cout << "For example: program /dev/copyroom 0 1000" << std::endl;
         return -1;
     }
 
     std::string rgbd_folder(argv[1]);
-    int frame_idx = 0;
-    std::string str_frame_idx = std::to_string(frame_idx);
-    std::string frame_fname = "frame-" + std::string(6 - str_frame_idx.length(), '0') + str_frame_idx;
-    std::string frame_fullname = rgbd_folder + "/" + frame_fname;
-    std::cout << "Read image file: " << frame_fullname << std::endl;
-    cv::Mat color_img = cv::imread(frame_fullname + ".color.jpg", cv::IMREAD_COLOR);
-    std::cout << color_img.type() << std::endl;
+    RGBDProcessor processor(rgbd_folder);
+    if (!processor.readCameraInfoFile())
+        return -1;
 
+    const int kStartFrameIdx = atoi(argv[2]);
+    const int kEndFrameIdx = atoi(argv[3]);
     const int kWindowWidth = 1280;
     const int kWindowHeight = 960;
-    const int kImageWidth = color_img.cols;
-    const int kImageHeight = color_img.rows;
 
     // Create OpenGL window in single line
     pangolin::CreateWindowAndBind("Main", kWindowWidth, kWindowHeight);
@@ -54,14 +41,14 @@ int main(int argc, char* argv[])
     // - u0, v0: 中心点在图片中的位置，通常就是 cx 和 cy，即图片正中心
     // - zNear, zFar: 即 projection near plane 和 far plane 的位置（Z 轴上），不过它们都是正值
     //
-    // 
+    //
     pangolin::OpenGlRenderState s_cam(
-        pangolin::ProjectionMatrix(kImageWidth, kImageHeight, 420, 420, 512, 389, 0.1,1000),
+        pangolin::ProjectionMatrix(processor.depth_width_, processor.depth_height_, processor.depth_intrinsics_.fx,
+            processor.depth_intrinsics_.fy, processor.depth_intrinsics_.cx, processor.depth_intrinsics_.cy, 0.1, 1000),
         pangolin::ModelViewLookAt(0, 0, 0, 0, 0, 1, pangolin::AxisNegY));
     // pangolin::OpenGlRenderState s_cam(
     //     pangolin::ProjectionMatrix(kWindowWidth, kWindowHeight, 420, 420, 512, 389, 0.1,1000),
     //     pangolin::ModelViewLookAt(-1, 1, -1, 0, 0, 0, pangolin::AxisY));
-
 
     // Aspect ratio allows us to constrain width and height whilst fitting within specified
     // bounds. A positive aspect ratio makes a view 'shrink to fit' (introducing empty bars),
@@ -86,9 +73,11 @@ int main(int argc, char* argv[])
     // unsigned char* imageArray = new unsigned char[3 * width * height];
     // pangolin::GlTexture imageTexture(width, height, GL_RGB, false, 0, GL_RGB, GL_UNSIGNED_BYTE);
 
-    pangolin::GlTexture imageTexture(color_img.cols, color_img.rows, GL_RGB, false, 0, GL_BGR, GL_UNSIGNED_BYTE);
+    pangolin::GlTexture imageTexture(
+        processor.color_width_, processor.color_height_, GL_RGB, false, 0, GL_BGR, GL_UNSIGNED_BYTE);
 
     // Default hooks for exiting (Esc) and fullscreen (tab).
+    int frame_idx = kStartFrameIdx;
     while (!pangolin::ShouldQuit())
     {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -104,17 +93,19 @@ int main(int argc, char* argv[])
         // Set some random image data and upload to GPU
         // setImageData(imageArray, 3 * width * height);
         // imageTexture.Upload(imageArray, GL_RGB, GL_UNSIGNED_BYTE);
+        if (frame_idx <= kEndFrameIdx)
+            processor.readColorImage(frame_idx++);
 
         // 同样道理，因为 cv::Mat 是 BGR 顺序，因此这里参数也设置成 GL_BGR
-        imageTexture.Upload(color_img.data, GL_BGR, GL_UNSIGNED_BYTE);
+        imageTexture.Upload(processor.color_image_.data, GL_BGR, GL_UNSIGNED_BYTE);
 
         // display the image
         d_image.Activate();
         glColor3f(1.0, 1.0, 1.0);
         // imageTexture.RenderToViewport();
 
-        // 注意：cv::Mat 存储图片是自下而上的，单纯的渲染所渲染出来的图片是倒置的，因此需使用 RenderToViewportFlipY() 函数
-        // 进行渲染，将原本上下倒置的图片进行自下而上渲染，使显示的图片是正的。
+        // 注意：cv::Mat 存储图片是自下而上的，单纯的渲染所渲染出来的图片是倒置的，因此需使用 RenderToViewportFlipY()
+        // 函数 进行渲染，将原本上下倒置的图片进行自下而上渲染，使显示的图片是正的。
         imageTexture.RenderToViewportFlipY();
 
         pangolin::FinishFrame();
