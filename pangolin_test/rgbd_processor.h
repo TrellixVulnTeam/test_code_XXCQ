@@ -22,6 +22,7 @@ public:
     int color_height_;
     int depth_width_;
     int depth_height_;
+    Eigen::Matrix4d pose_camera_to_global_;
 
 public:
     RGBDProcessor(const std::string& rgbd_folder);
@@ -30,4 +31,6 @@ public:
     bool readCameraInfoFile();
     bool readColorImage(int frame_idx);
     bool readDepthImage(int frame_idx);
+    bool readCameraPoseFile(int frame_idx);
+    void drawDepthPointCloud();
 };
