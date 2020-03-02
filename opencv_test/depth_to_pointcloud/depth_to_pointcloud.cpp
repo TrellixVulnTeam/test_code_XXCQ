@@ -65,7 +65,7 @@ std::string getCvMatType(int type)
     return r;
 }
 
-int main(int argc, char const* argv[])
+int main(int argc, char const *argv[])
 {
     if (argc != 2)
     {
@@ -81,34 +81,30 @@ int main(int argc, char const* argv[])
     }
     std::cout << "Image Type:" << getCvMatType(src.type()) << std::endl;
 
-    // const double fx = 326.0, fy = 326.0, cx = 160.0, cy = 120.0;
-    const double fx =  182.8947, fy = fx, cx = 120, cy = 90;
+    const double fx = 326.0, fy = 326.0, cx = 160.0, cy = 120.0;  // intrinsics for Galaxy Note 10+ phone
+    // const double fx = 182.8947, fy = fx, cx = 120, cy = 90; // intrinsics for Huawei P30 Pro
 
-    const double kMaxDepth = 4000;
-    const double kMinDepth = 200;
     std::string xyz_fname = image_name.substr(0, image_name.length() - 4) + ".xyz";
+    const double kMinDepthConfidence = 0.1;
     std::ofstream writeout(xyz_fname, std::ios::trunc);
-    for (int i = 0; i < src.rows; ++i)
+    for (int j = 0; j < src.rows; ++j)
     {
-        // unsigned char* p = src.ptr<cv::Vec3b>(i); // 先获取每一行开头的指针
-        for (int j = 0; j < src.cols; ++j)
+        for (int i = 0; i < src.cols; ++i)
         {
-            int b = int(src.at<cv::Vec3b>(i, j)[0]);
-            int g = int(src.at<cv::Vec3b>(i, j)[1]);
-            int r = int(src.at<cv::Vec3b>(i, j)[2]);
-            // g = 2;
-            int depth = ((r << 16) | (g << 8)) | b;
-            // double depth = double(src.at<unsigned short>(i, j)) / 5;
-            if (depth > kMaxDepth || depth < kMinDepth)
-                continue;
-            // std::cout << i << "," << j << ": " << b << " " << g << " " << r << " ... " << depth << std::endl;
-            double z = double(depth) / 1000;
-            double x = (i - cx) * z / fx;
-            double y = (j - cy) * z / fy;
-            writeout << x << " " << y << " " << z << std::endl;
+            int b = int(src.at<cv::Vec4b>(j, i)[0]);
+            int g = int(src.at<cv::Vec4b>(j, i)[1]);  // channel R and A are useless
+            int depth = ((g << 8) | b);
+            if (depth > 0)
+            {
+                double z = double(depth) / 1000;
+                double x = (i - cx) * z / fx;
+                double y = (j - cy) * z / fy;
+                writeout << x << " " << y << " " << z << std::endl;
+            }
         }
     }
     writeout.close();
+    std::cout << "Point cloud file saved in " << xyz_fname << std::endl;
 
     return 0;
 }

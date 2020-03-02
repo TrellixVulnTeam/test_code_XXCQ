@@ -5,6 +5,7 @@
 #include <string>
 #include <stdio.h>
 #include "termcolor.hpp"
+#include <string_view>
 
 //! Print text in color in the console.
 #if defined(__linux__) || defined(__APPLE__)
