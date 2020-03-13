@@ -85,15 +85,16 @@ int main(int argc, char const* argv[])
         return -1;
     }
     std::string image_name(argv[1]);
-    cv::Mat src = cv::imread(image_name, cv::IMREAD_ANYDEPTH);
+    cv::Mat src = cv::imread(image_name, cv::IMREAD_UNCHANGED);
     if (!src.data)
     {
         std::cout << "Cannot read image " << image_name << "!" << std::endl;
         return -1;
     }
     std::cout << "Image Type:" << cvMatType2Str(src.type()) << std::endl;
-    cv::Mat gray = convertUshortToGrey(src);
 
+
+    // cv::Mat gray = convertUshortToGrey(src);
     // cv::imwrite("gray.png", gray);
 
     //----------------------------------------------------
@@ -102,20 +103,20 @@ int main(int argc, char const* argv[])
     // cv::Mat temp = gray(rect1); // Now temp is a reference/pointer to the image rectangle
     // temp.setTo(cv::Scalar(255)); // changing reference image also changes the original image 'gray'
 
-    // Test mask and common operators
-    cv::Mat mask = (gray < 100) | (gray > 200);  // mask matrix supports and (&), or (|) operations
-    cv::Mat mask1 = gray < 100;
-    cv::Mat mask2 = gray > 200;
-    std::cout << "Mask type: " << cvMatType2Str(mask.type())
-              << std::endl;  // Mask matrix is 8UC1 type (i.e., cv::Mat1b)
-    gray.setTo(0, 1 - (mask1 | mask2));
+    // // Test mask and common operators
+    // cv::Mat mask = (gray < 100) | (gray > 200);  // mask matrix supports and (&), or (|) operations
+    // cv::Mat mask1 = gray < 100;
+    // cv::Mat mask2 = gray > 200;
+    // std::cout << "Mask type: " << cvMatType2Str(mask.type())
+    //           << std::endl;  // Mask matrix is 8UC1 type (i.e., cv::Mat1b)
+    // gray.setTo(0, 1 - (mask1 | mask2));
 
-    // cv::Mat out = gray - 0.8 * gray; // matrix also support + and -
+    // // cv::Mat out = gray - 0.8 * gray; // matrix also support + and -
 
-    std::string window_name("Test");
-    cv::namedWindow(window_name);
-    cv::imshow(window_name, gray);
-    cv::waitKey();
+    // std::string window_name("Test");
+    // cv::namedWindow(window_name);
+    // cv::imshow(window_name, gray);
+    // cv::waitKey();
 
     //----------------------------------------------------
 
