@@ -19,8 +19,6 @@ Camera g_myCamera;
 float g_lastX = SCR_WIDTH / 2.0f;
 float g_lastY = SCR_HEIGHT / 2.0f;
 bool g_leftMouseDownFirstTime = true; // 第一次按下鼠标时，系统没有上一次鼠标位置的记录，因此要特别区分
-float g_deltaTime = 0.0f;	// time between current frame and last frame
-float g_lastFrame = 0.0f;
 
 int main()
 {
@@ -221,11 +219,6 @@ int main()
     glEnable(GL_DEPTH_TEST);
     do
     {
-        // per-frame time logic
-        float currentFrame = glfwGetTime();
-        g_deltaTime = currentFrame - g_lastFrame;
-        g_lastFrame = currentFrame;
-
         processInputFast(window);
 
         // render
@@ -282,9 +275,9 @@ int main()
 }
 
 /// 定义 keyboard press 的回调函数（而不是将判断键盘输入放在主函数的循环中）。
-/// 它的好处是，可以更好的处理一个完整的键盘输入，可以避免按一次按键触发多次响应。即，它的原理似乎是，处理完
-/// 一次键盘响应后就会歇一下隔一点点时间再处理下一次键盘响应。因此，它更适用于我们想要按一次按键处理一件事情后马上停止，
-/// 例如切换某种状态、打开或者关闭某个开关等等。该函数的输入参数是固定的。
+/// 它的好处是，可以更好的处理一个完整的键盘输入，避免只按一次按键就触发多次响应。即，它的原理似乎是，处理完
+/// 一次完整的键盘响应（比如按下然后松开一次按键）后，隔一段时间再处理下一次键盘响应（即不连续的）。因此，它
+/// 适用于想要按一次按键处理一件事情后马上停止。例如，按一次按键便切换某种渲染状态之类的。同样的，回调函数的参数固定。
 void keyPressCallBack(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     // 测试一个简单的纹理效果：通过上下键来修改 GLSL 中的一个 uniform 变量，该变量用于平衡两个纹理图片所占的比例
@@ -302,68 +295,60 @@ void keyPressCallBack(GLFWwindow* window, int key, int scancode, int action, int
     }
 }
 
-/// 监视键盘和鼠标输入。注意这并非回调函数，而是直接放在主循环中的。它的优点是处理速度快，因此更适合处理某种需要
-/// 连续显示的事情，例如平移物体等。
+/// 同样是监视键盘和鼠标输入，不过这是自定义的函数，并非回调函数，它是直接放在主循环中的。
+/// 它的优点是处理速度快，因此更适合处理某种需要连续显示的任务。例如，按下按键来平滑的移动物体。
 void processInputFast(GLFWwindow *window)
 {
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        g_myCamera.processKeyboardMovement(Camera::ModelViewMode::MOVE_FORWARD, g_deltaTime);
+        g_myCamera.processTranslation(Camera::ModelViewMode::MOVE_Z, 0.1); // 0.1 是移动速度
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        g_myCamera.processKeyboardMovement(Camera::ModelViewMode::MOVE_BACKWARD, g_deltaTime);
+        g_myCamera.processTranslation(Camera::ModelViewMode::MOVE_Z, -0.1);
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        g_myCamera.processKeyboardMovement(Camera::ModelViewMode::MOVE_LEFT, g_deltaTime);
+        g_myCamera.processTranslation(Camera::ModelViewMode::MOVE_X, -0.1);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        g_myCamera.processKeyboardMovement(Camera::ModelViewMode::MOVE_RIGHT, g_deltaTime);
+        g_myCamera.processTranslation(Camera::ModelViewMode::MOVE_X, 0.1);
 }
 
 // glfw: whenever the mouse moves, this callback is called
 // -------------------------------------------------------
 void mouseCursorCallBack(GLFWwindow * window, double xpos, double ypos)
 {
-    if (glfwGetKey(window, GLFW_KEY_LEFT_SUPER) == GLFW_PRESS &&
-        glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
-    {
-        g_myCamera.setModelViewMode(Camera::ModelViewMode::TRANSLATE);
-    }
-    else if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) 
-    {
-        g_myCamera.setModelViewMode(Camera::ModelViewMode::ROTATE);
-    }
-    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_RELEASE) 
+    int mouseLeftButtonMode = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
+    if (mouseLeftButtonMode == GLFW_RELEASE) 
     {
         g_leftMouseDownFirstTime = true; // 鼠标左键抬起后，将它 reset，为了下一次鼠标按下时使用
-        g_myCamera.setModelViewMode(Camera::ModelViewMode::NOTHING);
     }
-    Camera::ModelViewMode currMode = g_myCamera.getModelViewMode();
-    if (currMode == Camera::ModelViewMode::TRANSLATE || currMode == Camera::ModelViewMode::ROTATE)
+    else if (mouseLeftButtonMode == GLFW_PRESS)
     {
-        double xpos, ypos;
-        glfwGetCursorPos(window, &xpos, &ypos);  // get current cursor position
+        float xoffset = xpos - g_lastX;
+        float yoffset = ypos - g_lastY; 
+        g_lastX = xpos;
+        g_lastY = ypos;
         if (g_leftMouseDownFirstTime)
         {
             // 第一次按下鼠标时，并没有上一次的鼠标位置的记录，故此时要区别对待
-            g_lastX = xpos;
-            g_lastY = ypos;
+            xoffset = yoffset = 0;
             g_leftMouseDownFirstTime = false;
         }
-        float xoffset = xpos - g_lastX;
-        float yoffset = ypos - g_lastY;  // GLFW 窗口中的 Y-coordinate（纵向）是从底向上增大的
-        g_lastX = xpos;
-        g_lastY = ypos;
-        if (currMode == Camera::ModelViewMode::TRANSLATE)
+        if (glfwGetKey(window, GLFW_KEY_LEFT_SUPER) == GLFW_PRESS)
         {
-            g_myCamera.processMouseTranslation(xoffset, yoffset);
+            // 如果 Command + 鼠标左键同时按下，则进入了平移模式
+            // 注意，这里实现的是平移模型，但是内部其实是相当于向反方向平移相机，因此符号相反。
+            g_myCamera.processTranslation(Camera::ModelViewMode::MOVE_X, -xoffset * 0.005); // 乘以一个小的系数，防止平移速度过快
+            g_myCamera.processTranslation(Camera::ModelViewMode::MOVE_Y, yoffset * 0.005);
         }
         else
         {
-            g_myCamera.processMouseRotation(xoffset, yoffset);
+            // 其余都是旋转模式
+            g_myCamera.processRotation(xoffset, yoffset);
         }
     }
+    
 }
 
 void mouseScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 {
-    g_myCamera.processMouseScroll(yoffset);
+    g_myCamera.processZoom(yoffset);
 }
 
 /// glfw: whenever the window size changed (by OS or user resize) this callback function executes

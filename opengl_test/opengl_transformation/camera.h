@@ -78,10 +78,9 @@ public:
         ROTATE,
         TRANSLATE,
         ZOOM,
-        MOVE_LEFT,
-        MOVE_RIGHT,
-        MOVE_FORWARD,
-        MOVE_BACKWARD,
+        MOVE_X, // 朝相机的三个轴方向平移
+        MOVE_Y,
+        MOVE_Z
     };
 
     Camera(const Eigen::Vector3f& cameraPosition = Eigen::Vector3f(0.0, 0.0, 3.0),
@@ -94,7 +93,6 @@ public:
         : m_cameraPosition(cameraPosition),
           m_targetPosition(targetPosition),
           m_upVector(upVector),
-          m_speed(speed),
           m_sensitivity(sensitivity),
           m_fov(fov),
           m_aspectRatio(aspect),
@@ -115,7 +113,6 @@ public:
         : m_cameraPosition(cx, cy, cz),
           m_targetPosition(tx, ty, tz),
           m_upVector(ux, uy, uz),
-          m_speed(speed),
           m_sensitivity(sensitivity),
           m_fov(fov),
           m_aspectRatio(aspect),
@@ -128,22 +125,35 @@ public:
 
     ~Camera() {}
 
-    void processMouseRotation(float xOffset, float yOffset)
+    /// 处理 camera view rotation
+    void processRotation(float xOffset, float yOffset)
     {
         xOffset *= m_sensitivity;
         yOffset *= m_sensitivity;
+        // 注意，模型旋转的方向是和 camera facing vector 旋转方向相反的，因为我们在（比如用鼠标拖拽）旋转模型时，其实这里实现的并非是旋转模型，而是旋转 camera view，
+        // 即相机朝着模型旋转方向的反方向旋转。这里先旋转相机的 facing vector，然后再计算新的 camera position 的位置。
         m_facingVector = Eigen::AngleAxisf(toRadian(-xOffset), m_upVector) * Eigen::AngleAxisf(toRadian(-yOffset), m_rightVector) * m_facingVector;
         m_facingVector.normalize();
         m_cameraPosition = m_targetPosition - (m_targetPosition - m_cameraPosition).norm() * m_facingVector;
         updateCameraView();
     }
 
-    void processMouseTranslation(float xOffset, float yOffset)
+    /// 处理 camera view translation
+    void processTranslation(ModelViewMode mode, float offset)
     {
-
+        Eigen::Vector3f delta = Eigen::Vector3f::Zero();
+        if (mode == ModelViewMode::MOVE_Z)
+            delta = m_facingVector * offset;
+        else if (mode == ModelViewMode::MOVE_X)
+            delta = m_rightVector * offset;
+        else if (mode == ModelViewMode::MOVE_Y)
+            delta = m_upVector * offset;
+        m_cameraPosition += delta;
+        m_targetPosition += delta;
+        m_cameraViewMatrix = cameraLookAt(m_cameraPosition, m_facingVector, m_upVector);
     }
-
-    void processMouseScroll(float yoffset)
+    /// 处理缩放，通过更改 projection matrix 中的 fov 来实现。当然，修改近平面的位置其实也可以。
+    void processZoom(float yoffset)
     {
         if (m_fov >= 1.0f && m_fov <= 90.0f)
             m_fov -= yoffset;
@@ -154,44 +164,8 @@ public:
         m_projectionMatrix = perspectiveProjectionFov(m_fov, m_aspectRatio, 0.1f, 100.0f);
     }
 
-    void processKeyboardMovement(ModelViewMode mode, float deltaTime)
-    {
-        float velocity = m_speed * deltaTime;
-        if (mode == ModelViewMode::MOVE_FORWARD || mode == ModelViewMode::MOVE_BACKWARD)
-        {
-            Eigen::Vector3f delta = m_facingVector * velocity;
-            if (mode == ModelViewMode::MOVE_FORWARD)
-            {
-                m_cameraPosition += delta;
-                m_targetPosition += delta;
-            }
-            else
-            {
-                m_cameraPosition -= delta;
-                m_targetPosition -= delta;
-            }
-            m_cameraViewMatrix = cameraLookAt(m_cameraPosition, m_facingVector, m_upVector);
-        }
-        else if (mode == ModelViewMode::MOVE_LEFT || mode == ModelViewMode::MOVE_RIGHT)
-        {
-            Eigen::Vector3f delta = m_rightVector * velocity;
-            if (mode == ModelViewMode::MOVE_LEFT)
-            {
-                m_cameraPosition -= delta;
-                m_targetPosition -= delta;
-            }
-            else
-            {
-                m_cameraPosition += delta;
-                m_targetPosition += delta;
-            }
-            m_cameraViewMatrix = cameraLookAt(m_cameraPosition, m_facingVector, m_upVector);
-        }
-    }
-
     void setModelViewMode(ModelViewMode mode) { m_modelViewMode = mode; }
     ModelViewMode getModelViewMode() { return m_modelViewMode; } 
-
     Eigen::Matrix4f getCameraViewMatrix() { return m_cameraViewMatrix; }
     Eigen::Matrix4f getProjectionMatrix() { return m_projectionMatrix; }
 
@@ -204,8 +178,6 @@ private:
     Eigen::Matrix4f m_cameraViewMatrix;  // camera view matrix
     Eigen::Matrix4f m_projectionMatrix;  // projection matrix
     ModelViewMode m_modelViewMode;       // 模型当前状态
-
-    float m_speed;                   // zoom in/out 的速度，数值越大， zoom in/out 越快
     float m_sensitivity;             // 数值越大，旋转越敏感，每次旋转的幅度越大
     float m_fov;                     // 用于 zoom in/out，数值越大，渲染物体越大
     float m_aspectRatio;             // 用于 perspective projection
