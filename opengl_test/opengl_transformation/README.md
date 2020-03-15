@@ -1,6 +1,6 @@
 # opengl_transformation
 
-![](resources/demo_opengl_transformation.gif)
+![](resources/demo_opengl_transformation_low.gif)
 
 本工程是一个有关 OpenGL Transformation Pipeline 的模板工程。它实现的内容有：
 - 定义了一个 Camera Class，负责所有和 Camera View 相关的处理，包括：
