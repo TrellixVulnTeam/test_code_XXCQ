@@ -38,6 +38,8 @@ if __name__ == '__main__':
                         help='depth intrinsics: image height')
     args = parser.parse_args()
 
+    print(o3d.__version__)
+
     print("Read depth image file: ", args.depth_file)
     depth_raw = o3d.io.read_image(args.depth_file)
 
