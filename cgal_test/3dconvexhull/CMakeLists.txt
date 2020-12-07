@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 cmake_minimum_required(VERSION 3.1)
 project(3dconvexhull)
 
@@ -14,27 +13,3 @@ if(CGAL_FOUND AND CGAL_Qt5_FOUND)
 else()
   message("ERROR: this program requires CGAL and CGAL_Qt5 and will not be compiled.")
 endif()
-=======
-# Created by the script cgal_create_cmake_script
-# This is the CMake script for compiling a CGAL application.
-
-
-project( 3dconvexhull_ )
-
-cmake_minimum_required(VERSION 2.8.10)
-
-set(CMAKE_CXX_STANDARD 14)
-
-find_package(CGAL QUIET COMPONENTS Core )
-
-if ( CGAL_FOUND )
-
-  create_single_source_cgal_program( "quickhull_3.cpp" )
-
-else()
-  
-    message(STATUS "This program requires the CGAL library, and will not be compiled.")
-  
-endif()
-
->>>>>>> 08dd02ffa669bf2682b942dade4e8483a49e7dfb

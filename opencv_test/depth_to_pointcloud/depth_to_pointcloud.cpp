@@ -108,5 +108,3 @@ int main(int argc, char const *argv[])
 
     return 0;
 }
-
-Max value: 13273, Min value: 12749
