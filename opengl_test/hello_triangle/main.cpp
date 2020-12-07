@@ -42,8 +42,10 @@ int main()
     // -------------------------------------------------------------------------------
     glfwInit();
     // 指定你使用的 OpenGL 版本。有关 Mac 不同机型支持的 OpenGL 版本可以查看：https://support.apple.com/en-us/HT202823
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+    // Ubuntu/Linux 中可以用 `glxinfo | grep "OpenGL"` 命令来查看。注意也要和你下载的 glad 对应的 OpenGL version
+    // 保持一致。
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     // 下面这行是 Mac 系统必须的
@@ -201,7 +203,7 @@ int main()
 /// 一个好处是可以避免重复多次的键盘输入来不及响应。该函数的输入参数是固定的。
 void keyPressCallBack(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-    if (key == GLFW_KEY_W && action == GLFW_PRESS) // 必须加上判断该按键是按下的，否则的话，按下和抬起都在考虑之类
+    if (key == GLFW_KEY_W && action == GLFW_PRESS)  // 必须加上判断该按键是按下的，否则的话，按下和抬起都在考虑之类
         g_flagShowWireFrame = !g_flagShowWireFrame;
     if (g_flagShowWireFrame)
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);

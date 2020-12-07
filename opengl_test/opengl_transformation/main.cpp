@@ -5,20 +5,21 @@
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 void keyPressCallBack(GLFWwindow* window, int key, int scancode, int action, int mods);
-void mouseCursorCallBack(GLFWwindow * window, double xpos, double ypos);
+void mouseCursorCallBack(GLFWwindow* window, double xpos, double ypos);
 void mouseScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
-void processInputFast(GLFWwindow *window);
+void processInputFast(GLFWwindow* window);
 
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 const float kTextureRatioInterval = 0.1;
 float g_textureRatio = 0.5;
+const float kKeyboardMovingSpeed = 0.05;
 
 // Camera
 Camera g_myCamera;
 float g_lastX = SCR_WIDTH / 2.0f;
 float g_lastY = SCR_HEIGHT / 2.0f;
-bool g_leftMouseDownFirstTime = true; // 第一次按下鼠标时，系统没有上一次鼠标位置的记录，因此要特别区分
+bool g_leftMouseDownFirstTime = true;  // 第一次按下鼠标时，系统没有上一次鼠标位置的记录，因此要特别区分
 
 int main()
 {
@@ -26,8 +27,10 @@ int main()
     // -------------------------------------------------------------------------------
     glfwInit();
     // 指定你使用的 OpenGL 版本。有关 Mac 不同机型支持的 OpenGL 版本可以查看：https://support.apple.com/en-us/HT202823
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+    // Ubuntu/Linux 中可以用 `glxinfo | grep "OpenGL"` 命令来查看。注意也要和你下载的 glad 对应的 OpenGL version
+    // 保持一致。
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     // 下面这行是 Mac 系统必须的
@@ -59,62 +62,28 @@ int main()
     // -------------------------------------------------------------------------------
     // 这次要绘制一个 Cube。每个顶点包含了三维坐标和纹理坐标三个属性。一个顶点共有 8 floats。注意这里每个平面
     // 都对应有纹理，即每个顶点会有多个纹理坐标，故此时就暂时不用 EBO 了，省的麻烦。
-    float vertices[] = {
-        -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, 
-        0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 
-        0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
-        0.5f, 0.5f, -0.5f, 1.0f, 1.0f, 
-        -0.5f, 0.5f, -0.5f, 0.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f, 0.0f, 0.0f,
+    float vertices[] = {-0.5f, -0.5f, -0.5f, 0.0f, 0.0f, 0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
+        0.5f, 0.5f, -0.5f, 1.0f, 1.0f, -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, -0.5f, -0.5f, -0.5f, 0.0f, 0.0f,
 
-        -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 
-        0.5f, -0.5f, 0.5f, 1.0f, 0.0f, 
-        0.5f, 0.5f, 0.5f, 1.0f, 1.0f, 
-        0.5f, 0.5f, 0.5f, 1.0f, 1.0f, 
-        -0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 
-        -0.5f, -0.5f, 0.5f, 0.0f, 0.0f,
+        -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 0.5f, -0.5f, 0.5f, 1.0f, 0.0f, 0.5f, 0.5f, 0.5f, 1.0f, 1.0f, 0.5f, 0.5f, 0.5f,
+        1.0f, 1.0f, -0.5f, 0.5f, 0.5f, 0.0f, 1.0f, -0.5f, -0.5f, 0.5f, 0.0f, 0.0f,
 
-        -0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
-        -0.5f, 0.5f, -0.5f, 1.0f, 1.0f, 
-        -0.5f, -0.5f, -0.5f, 0.0f, 1.0f, 
-        -0.5f, -0.5f, -0.5f, 0.0f, 1.0f, 
-        -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 
-        -0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
+        -0.5f, 0.5f, 0.5f, 1.0f, 0.0f, -0.5f, 0.5f, -0.5f, 1.0f, 1.0f, -0.5f, -0.5f, -0.5f, 0.0f, 1.0f, -0.5f, -0.5f,
+        -0.5f, 0.0f, 1.0f, -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, -0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
 
-        0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 
-        0.5f, 0.5f, -0.5f, 1.0f, 1.0f, 
-        0.5f, -0.5f, -0.5f, 0.0f, 1.0f, 
-        0.5f, -0.5f, -0.5f, 0.0f, 1.0f, 
-        0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 
-        0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
+        0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.5f, 0.5f, -0.5f, 1.0f, 1.0f, 0.5f, -0.5f, -0.5f, 0.0f, 1.0f, 0.5f, -0.5f, -0.5f,
+        0.0f, 1.0f, 0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
 
-        -0.5f, -0.5f, -0.5f, 0.0f, 1.0f, 
-        0.5f, -0.5f, -0.5f, 1.0f, 1.0f, 
-        0.5f, -0.5f, 0.5f, 1.0f, 0.0f, 
-        0.5f, -0.5f, 0.5f, 1.0f, 0.0f, 
-        -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 
-        -0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f, 0.0f, 1.0f, 0.5f, -0.5f, -0.5f, 1.0f, 1.0f, 0.5f, -0.5f, 0.5f, 1.0f, 0.0f, 0.5f, -0.5f,
+        0.5f, 1.0f, 0.0f, -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, -0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
 
-        -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 
-        0.5f, 0.5f, -0.5f, 1.0f, 1.0f, 
-        0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 
-        0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 
-        -0.5f, 0.5f, 0.5f, 0.0f, 0.0f,
-        -0.5f, 0.5f, -0.5f, 0.0f, 1.0f
-    };
+        -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.5f, 0.5f, -0.5f, 1.0f, 1.0f, 0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.5f, 0.5f, 0.5f,
+        1.0f, 0.0f, -0.5f, 0.5f, 0.5f, 0.0f, 0.0f, -0.5f, 0.5f, -0.5f, 0.0f, 1.0f};
 
-    Eigen::Vector3f cubePositions[] = {
-        Eigen::Vector3f( 0.0f,  0.0f,  0.0f),
-        Eigen::Vector3f( 2.0f,  5.0f, -15.0f),
-        Eigen::Vector3f(-1.5f, -2.2f, -2.5f),
-        Eigen::Vector3f(-3.8f, -2.0f, -12.3f),
-        Eigen::Vector3f( 2.4f, -0.4f, -3.5f),
-        Eigen::Vector3f(-1.7f,  3.0f, -7.5f),
-        Eigen::Vector3f( 1.3f, -2.0f, -2.5f),
-        Eigen::Vector3f( 1.5f,  2.0f, -2.5f),
-        Eigen::Vector3f( 1.5f,  0.2f, -1.5f),
-        Eigen::Vector3f(-1.3f,  1.0f, -1.5f)
-    };
+    Eigen::Vector3f cubePositions[] = {Eigen::Vector3f(0.0f, 0.0f, 0.0f), Eigen::Vector3f(2.0f, 5.0f, -15.0f),
+        Eigen::Vector3f(-1.5f, -2.2f, -2.5f), Eigen::Vector3f(-3.8f, -2.0f, -12.3f),
+        Eigen::Vector3f(2.4f, -0.4f, -3.5f), Eigen::Vector3f(-1.7f, 3.0f, -7.5f), Eigen::Vector3f(1.3f, -2.0f, -2.5f),
+        Eigen::Vector3f(1.5f, 2.0f, -2.5f), Eigen::Vector3f(1.5f, 0.2f, -1.5f), Eigen::Vector3f(-1.3f, 1.0f, -1.5f)};
     const int kNumTriangles = sizeof(vertices) / (sizeof(float) * 5);
     const int kNumCubes = sizeof(cubePositions) / sizeof(Eigen::Vector3f);
 
@@ -246,8 +215,8 @@ int main()
         {
             // model matrix
             Eigen::Isometry3f modelMatrixIso = Eigen::Isometry3f::Identity();
-            modelMatrixIso.pretranslate(cubePositions[i]); // 增加平移
-            modelMatrixIso.rotate(Eigen::AngleAxisf(20.0f * i, Eigen::Vector3f(1.0f, 0.3f, 0.5f))); // 增加旋转
+            modelMatrixIso.pretranslate(cubePositions[i]);                                           // 增加平移
+            modelMatrixIso.rotate(Eigen::AngleAxisf(20.0f * i, Eigen::Vector3f(1.0f, 0.3f, 0.5f)));  // 增加旋转
 
             // 最终的转移矩阵是多个矩阵相乘
             Eigen::Matrix4f finalTransformationMatrix = projectionMatrix * cameraViewMatrix * modelMatrixIso.matrix();
@@ -297,31 +266,31 @@ void keyPressCallBack(GLFWwindow* window, int key, int scancode, int action, int
 
 /// 同样是监视键盘和鼠标输入，不过这是自定义的函数，并非回调函数，它是直接放在主循环中的。
 /// 它的优点是处理速度快，因此更适合处理某种需要连续显示的任务。例如，按下按键来平滑的移动物体。
-void processInputFast(GLFWwindow *window)
+void processInputFast(GLFWwindow* window)
 {
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        g_myCamera.processTranslation(Camera::ModelViewMode::MOVE_Z, 0.1); // 0.1 是移动速度
+        g_myCamera.processTranslation(Camera::ModelViewMode::MOVE_Z, kKeyboardMovingSpeed); 
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        g_myCamera.processTranslation(Camera::ModelViewMode::MOVE_Z, -0.1);
+        g_myCamera.processTranslation(Camera::ModelViewMode::MOVE_Z, -kKeyboardMovingSpeed);
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        g_myCamera.processTranslation(Camera::ModelViewMode::MOVE_X, -0.1);
+        g_myCamera.processTranslation(Camera::ModelViewMode::MOVE_X, -kKeyboardMovingSpeed);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        g_myCamera.processTranslation(Camera::ModelViewMode::MOVE_X, 0.1);
+        g_myCamera.processTranslation(Camera::ModelViewMode::MOVE_X, kKeyboardMovingSpeed);
 }
 
 // glfw: whenever the mouse moves, this callback is called
 // -------------------------------------------------------
-void mouseCursorCallBack(GLFWwindow * window, double xpos, double ypos)
+void mouseCursorCallBack(GLFWwindow* window, double xpos, double ypos)
 {
     int mouseLeftButtonMode = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
-    if (mouseLeftButtonMode == GLFW_RELEASE) 
+    if (mouseLeftButtonMode == GLFW_RELEASE)
     {
-        g_leftMouseDownFirstTime = true; // 鼠标左键抬起后，将它 reset，为了下一次鼠标按下时使用
+        g_leftMouseDownFirstTime = true;  // 鼠标左键抬起后，将它 reset，为了下一次鼠标按下时使用
     }
     else if (mouseLeftButtonMode == GLFW_PRESS)
     {
         float xoffset = xpos - g_lastX;
-        float yoffset = ypos - g_lastY; 
+        float yoffset = ypos - g_lastY;
         g_lastX = xpos;
         g_lastY = ypos;
         if (g_leftMouseDownFirstTime)
@@ -334,7 +303,8 @@ void mouseCursorCallBack(GLFWwindow * window, double xpos, double ypos)
         {
             // 如果 Command + 鼠标左键同时按下，则进入了平移模式
             // 注意，这里实现的是平移模型，但是内部其实是相当于向反方向平移相机，因此符号相反。
-            g_myCamera.processTranslation(Camera::ModelViewMode::MOVE_X, -xoffset * 0.005); // 乘以一个小的系数，防止平移速度过快
+            g_myCamera.processTranslation(
+                Camera::ModelViewMode::MOVE_X, -xoffset * 0.005);  // 乘以一个小的系数，防止平移速度过快
             g_myCamera.processTranslation(Camera::ModelViewMode::MOVE_Y, yoffset * 0.005);
         }
         else
@@ -343,7 +313,6 @@ void mouseCursorCallBack(GLFWwindow * window, double xpos, double ypos)
             g_myCamera.processRotation(xoffset, yoffset);
         }
     }
-    
 }
 
 void mouseScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
