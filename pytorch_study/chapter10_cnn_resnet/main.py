@@ -7,8 +7,9 @@ from torch import nn, optim
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
+import os
 
-from lenet5 import LeNet5
+from cnn import LeNet5, ResNet18
 
 from torch.utils.tensorboard import SummaryWriter
 
@@ -47,8 +48,8 @@ def plot_classes_preds(images, targets, preds, classes, image_num=4, rows=2):
         ax = fig.add_subplot(rows, cols, idx + 1, xticks=[], yticks=[])
         img_idx = randIdx[idx]
         matplotlib_imshow(images[img_idx], one_channel=False)
-        ax.set_title("GT: {0}\PD: {1}".format(classes[targets[img_idx]],
-                                                classes[preds[img_idx]]),
+        ax.set_title("GT: {0}\nPD: {1}".format(classes[targets[img_idx]],
+                                               classes[preds[img_idx]]),
                      color=("green" if preds[img_idx]
                             == targets[img_idx].item() else "red"))
     return fig
@@ -60,6 +61,7 @@ def main():
                         help='Training epoch number')
     parser.add_argument('--tensorboard_window_name', type=str,
                         default='')
+    parser.add_argument('--save_models_path', type=str, default='')
     args = parser.parse_args()
 
     # print(torch.cuda.is_available())
@@ -104,7 +106,8 @@ def main():
 
     # --- Start model training and testing
     device = torch.device('cuda:1')
-    net = LeNet5().to(device)
+    # net = LeNet5().to(device)
+    net = ResNet18().to(device)
     criteon = nn.CrossEntropyLoss().to(device)
     optimizer = optim.Adam(net.parameters(), lr=1e-3)
     epochs = args.epochs
@@ -130,7 +133,7 @@ def main():
 
                 if flag_tb_viewer:
                     # ...log the running loss
-                    writer.add_scalar('train_loss_batch', loss.item(),
+                    writer.add_scalar('train/loss/batch', loss.item(),
                                       epoch * len(cifar_train) + batch_idx)
 
         train_loss = loss.item()
@@ -144,7 +147,7 @@ def main():
                 data, target = data.to(device), target.to(device)
 
                 logits = net(data)
-                test_loss += criteon(logits, target)
+                test_loss += criteon(logits, target).item()
 
                 pred = logits.argmax(dim=1)
                 correct += pred.eq(target).sum()
@@ -155,9 +158,9 @@ def main():
 
         if flag_tb_viewer:
             # Add losses and accuracy per epoch in seperate curves
-            writer.add_scalar('train_loss_epoch', train_loss, epoch)
-            writer.add_scalar('test_loss_epoch', test_loss, epoch)
-            writer.add_scalar('test_accuracy_epoch', accuracy, epoch)
+            writer.add_scalar('train/loss/epoch', train_loss, epoch)
+            writer.add_scalar('test/loss/epoch', test_loss, epoch)
+            writer.add_scalar('test/accuracy', accuracy, epoch)
 
             # View some images
             data = sample_source.to(device)
@@ -173,6 +176,13 @@ def main():
                                                  rows=8),
                               global_step=epoch * len(cifar_train) +
                               batch_idx)
+
+        if args.save_models_path:
+            filename = 'model-epoch-{}-testloss-{:.2f}-accuracy-{:.2f}.mdl'.format(
+                epoch, test_loss, accuracy)
+            save_path = os.path.join(args.save_models_path, filename)
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            torch.save(net.state_dict(), save_path)
 
     if flag_tb_viewer:
         writer.close()
