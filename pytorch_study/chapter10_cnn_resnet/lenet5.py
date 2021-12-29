@@ -38,7 +38,6 @@ class LeNet5(nn.Module):
         batchsz = x.size(0)
         x = self.conv_unit(x)
         x = x.view(batchsz, -1)
-        print(x.shape)
         logits = self.fc_unit(x)
         return logits
 
