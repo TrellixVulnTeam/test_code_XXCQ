@@ -1,5 +1,7 @@
 """
-Sample LSTM-based sentence label classification with custom dataset
+Sample LSTM-based sentence label classification with custom dataset.
+
+本代码使用了 tsv/csv 格式的自定义数据集做 multi label classification 问题，基于一个普通的 LSTM 网络。
 
 This is a simple LSTM code using custom dataset called "Movie Review Sentiment Analysis".
 It provides sentences of movie reviews and corresponding labels. See the dataset link for details.
@@ -28,6 +30,61 @@ import spacy
 import argparse
 import os
 from torch.utils.tensorboard import SummaryWriter
+
+
+# Network Definition
+#
+# Here we define a simple LSTM-based network.
+class MyLSTM(nn.Module):
+    def __init__(self, vocab_size, embedding_dim, hidden_dim, num_labels, num_layers):
+        super(MyLSTM, self).__init__()
+
+        # Create this 'lookup' table. NOTE that this is only initialization. You need to
+        # copy the vocabulary data to this variable outside this network class explicitly.
+        self.embedding = nn.Embedding(
+            num_embeddings=vocab_size, embedding_dim=embedding_dim)
+
+        self.lstm = nn.LSTM(embedding_dim, hidden_dim,
+                            num_layers=num_layers, bidirectional=True, dropout=0.5)
+
+        # Here '* 2' because we are using bidirctional LSTM
+        self.linear = nn.Linear(hidden_dim * num_layers * 2, num_labels)
+        self.dropout = nn.Dropout(0.5)
+
+    def forward(self, x):
+        """
+        x: [seq_len, b]
+        """
+        # x: [seq_len, b] => embedding [seq_len, b, embedding_dim]
+        # nn.Embedding(x) is basically a lookup table, so for each element in x,
+        # it will replace this element with the embedding vector found in the table.
+        # This is exactly equal to adding a new dimension in the rightmost position of its size.
+        # That is,  [seq_len, b] => [seq_len, b, embedding_dim], while the latter is
+        # exactly the default input size of a LSTM network.
+        # NOTE:
+        # - This is interesting: Dropout can work on a common tensor (this is not like an unknown
+        # variable like weights). This is doable.
+        embedding = self.dropout(self.embedding(x))
+
+        # out: [seq_len, b, hidden_dim]
+        # h: [num_layers * 2, b, hidden_dim] (here multiplying 2 because we are using bidirctional LSTM)
+        # c: [num_layers * 2, b, hidden_dim]
+        net_out, (h, c) = self.lstm(embedding)
+        # print('net_out: {}, h: {}, c: {}'.format(net_out.shape, h.shape, c.shape))
+
+        # [num_layers * 2, b, hidden_dim] => a tuple of [b, hidden_dim] with size 'num_layers * 2'
+        h_split = h.split(1, dim=0)  # tuple of [1, b, hidden_dim]
+        h_split = [x.squeeze(0)
+                   for x in h_split]  # tuple of [b, hidden_dim]
+        # print(h_split[0].shape)
+
+        # concatenate this list of [b, hidden_dim] => [b, hidden_dim * num_layers * 2]
+        h_cat = torch.cat(h_split, dim=1)
+        # print(h_cat.shape)
+
+        # [b, hidden_dim * num_layers * 2] => [b, num_labels]
+        out = self.linear(self.dropout(h_cat))
+        return out
 
 
 def main():
@@ -72,8 +129,10 @@ def main():
     # 2. Create Dataset objects for training, testing, validation;
     # 3. Build vocabulary.
 
-    # Create tokenizer. Two ways, both work:
-    # 1) Define a function
+    # Create tokenizer (分词器，默认是用 split). 这里自定义一个分词器。
+    # 如果要定义中文分词器，可以参考这个教程：https://blog.nowcoder.net/n/3a8d2c1b05354f3b942edfd4966bb0c1
+    # Two ways, both work:
+    # 1) Define a custom function
     spacy_en = spacy.load('en_core_web_sm')
 
     def tokenizer(text):  # create a tokenizer function
@@ -177,61 +236,6 @@ def main():
     print(first_batch_target)
     # The data should be integer indices of words, instead of original words.
     print(first_batch_data)
-
-    # Network Definition
-    #
-    # Here we define a simple LSTM-based network.
-
-    class MyLSTM(nn.Module):
-        def __init__(self, vocab_size, embedding_dim, hidden_dim, num_labels, num_layers):
-            super(MyLSTM, self).__init__()
-
-            # Create this 'lookup' table. NOTE that this is only initialization. You need to
-            # copy the vocabulary data to this variable outside this network class explicitly.
-            self.embedding = nn.Embedding(
-                num_embeddings=vocab_size, embedding_dim=embedding_dim)
-
-            self.lstm = nn.LSTM(embedding_dim, hidden_dim,
-                                num_layers=num_layers, bidirectional=True, dropout=0.5)
-
-            # Here '* 2' because we are using bidirctional LSTM
-            self.linear = nn.Linear(hidden_dim * num_layers * 2, num_labels)
-            self.dropout = nn.Dropout(0.5)
-
-        def forward(self, x):
-            """
-            x: [seq_len, b]
-            """
-            # x: [seq_len, b] => embedding [seq_len, b, embedding_dim]
-            # nn.Embedding(x) is basically a lookup table, so for each element in x,
-            # it will replace this element with the embedding vector found in the table.
-            # This is exactly equal to adding a new dimension in the rightmost position of its size.
-            # That is,  [seq_len, b] => [seq_len, b, embedding_dim], while the latter is
-            # exactly the default input size of a LSTM network.
-            # NOTE:
-            # - This is interesting: Dropout can work on a common tensor (this is not like an unknown
-            # variable like weights). This is doable.
-            embedding = self.dropout(self.embedding(x))
-
-            # out: [seq_len, b, hidden_dim]
-            # h: [num_layers * 2, b, hidden_dim] (here multiplying 2 because we are using bidirctional LSTM)
-            # c: [num_layers * 2, b, hidden_dim]
-            net_out, (h, c) = self.lstm(embedding)
-            # print('net_out: {}, h: {}, c: {}'.format(net_out.shape, h.shape, c.shape))
-
-            # [num_layers * 2, b, hidden_dim] => a tuple of [b, hidden_dim] with size 'num_layers * 2'
-            h_split = h.split(1, dim=0)  # tuple of [1, b, hidden_dim]
-            h_split = [x.squeeze(0)
-                       for x in h_split]  # tuple of [b, hidden_dim]
-            # print(h_split[0].shape)
-
-            # concatenate this list of [b, hidden_dim] => [b, hidden_dim * num_layers * 2]
-            h_cat = torch.cat(h_split, dim=1)
-            # print(h_cat.shape)
-
-            # [b, hidden_dim * num_layers * 2] => [b, num_labels]
-            out = self.linear(self.dropout(h_cat))
-            return out
 
     # Training preparation
     #
