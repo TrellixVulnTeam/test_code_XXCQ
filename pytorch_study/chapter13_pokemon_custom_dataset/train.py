@@ -1,4 +1,21 @@
+"""
 
+本代码是自行实现的基于 Pokemon 数据集的多分类问题。特点：
+- 自定义数据集 Pokemon，包括 5 labels，每个类别有 200-300 张图片，一共 1196 张。
+- 使用自行实现的自定义的 DataLoader；
+- 网络基于自行实现的完整的 ResNet18，或 torchvision 已经训练好的 ResNet18。
+- 完整的 training, validation, testing 流程；
+- 包括 model checkpoints saving and loading；
+
+
+实验结果：
+1) 如果使用自行实现的 ResNet18 从头开始训练，validation/testing accuracy 最高都可达 88% 左右 
+    (Testing correct: 207/233)。无任何特别优化。考虑到 Pokemon 只有 1196 张图片，其中只有 60% 
+    用于 training 的话，这个初始准确率已经很不错了。
+2) 如果使用 torchvision 提供的已经训练好的 ResNet18（即 Transfer Learning），则 validation/testing 
+    accuracy 会提升到 95%（217/233）。相当不错。
+
+"""
 
 import argparse
 import os
@@ -10,9 +27,13 @@ from tensorboard_utils import render_batch_images
 from torch.utils.tensorboard import SummaryWriter
 from resnet18 import ResNet18
 from torch import nn, optim
+from torchvision.models import resnet18 as resnet18_pretrained
 
 
 def evaluate(model, device, criteon, loader):
+    """
+    Evaluation function. 
+    """
     correct = 0
     loss = 0
     accuracy = 0
@@ -42,10 +63,11 @@ def main():
     parser.add_argument('--batch_size', type=int, default=64,
                         help='Training epoch number')
     parser.add_argument('--tensorboard_window_name', type=str,
-                        default='')
+                        default='If not empty, this code will draw images, loss curves, etc on tensorboard')
     parser.add_argument('--save_models_path', type=str,
                         default='./checkpoints/pokemon_models')
-
+    parser.add_argument('--use_pretrained_model', action='store_true',
+                        help='Use pretrained ResNet18 model from torchvision')
     args = parser.parse_args()
 
     device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
@@ -117,7 +139,24 @@ def main():
 
     # -- Define network and kick off training
     num_class = len(train_db.name2label.keys())
-    net = ResNet18(num_class).to(device)
+    if args.use_pretrained_model:
+        # Transfer learning: use pretrained model provided by torchvision
+        trained_model = resnet18_pretrained(pretrained=True)
+        net = nn.Sequential(
+            # Use all layers of pretrained model except last layer, since we need to solve our problem whose number
+            # of classes is specific.
+            # Here:
+            # - .children() to get all layers;
+            # - [:-1] to use all layers except last one;
+            # - *list() to spread list to independent parameters, which are exactly the input parameters for nn.Sequential()
+            *list(trained_model.children())[:-1],
+            # Flatten the output: [b, 512, 1, 1] => [b, 512]
+            nn.Flatten(start_dim=1),
+            # [b, 512] => [b, num_class]
+            nn.Linear(512, num_class)
+        ).to(device)
+    else:
+        net = ResNet18(num_class).to(device)
     criteon = nn.CrossEntropyLoss().to(device)
     optimizer = optim.Adam(net.parameters(), lr=1e-3)
 
@@ -164,7 +203,7 @@ def main():
             epoch, train_loss, val_loss, correct, val_size, val_accuracy))
 
         # -- Save models
-        filename = 'model-epoch-{}-testloss-{:.3f}-accuracy-{:.3f}.mdl'.format(
+        filename = 'model-epoch-{}-valloss-{:.3f}-accuracy-{:.3f}.mdl'.format(
             epoch, val_loss, val_accuracy)
         save_path = os.path.join(args.save_models_path, filename)
         torch.save(net.state_dict(), save_path)
