@@ -18,7 +18,7 @@ def evaluate(model, device, criteon, loader):
     accuracy = 0
     model.eval()
     with torch.no_grad():
-        for x, y in enumerate(loader):
+        for x, y in loader:
             x, y = x.to(device), y.to(device)
 
             logits = model(x)
@@ -97,7 +97,8 @@ def main():
             lst.append(x)
 
             # Add groundtruth labels as a string and render it on tensorboard too.
-            label_str += train_db.label2name[sample_labels[i].cpu()] + ' '
+            label_idx = int(sample_labels[i].cpu())
+            label_str += train_db.label2name[label_idx] + ' '
             # Tensorboard text uses the markdown format (though it doesn't support all its
             # features). That means you need to add 2 spaces before \n to produce a linebreak,
             # e.g. line_1  \nline_2  \nline_3
@@ -147,7 +148,7 @@ def main():
             if batch_idx % 10 == 0:
                 print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                     epoch, batch_idx * len(images), train_size,
-                    100. * batch_idx / train_size, loss.item()))
+                    100. * batch_idx * len(images) / train_size, loss.item()))
 
                 if flag_tb_viewer:
                     # ...log the running loss
