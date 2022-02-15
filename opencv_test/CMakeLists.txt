@@ -6,7 +6,7 @@ project(opencv_test)
 # Usually it's inside `<opencv_path>/lib/cmake/opencv4` in Mac/Linux.
 # set(OpenCV_DIR /home/chao/dev/opencv-4.0-build/lib/cmake/opencv4)
 # set(OpenCV_DIR /home/chao/dev/opencv-3.4.3_build)
-set(OpenCV_DIR  /usr/local/Cellar/opencv/4.5.1_2/lib/cmake/opencv4)
+# set(OpenCV_DIR  /usr/local/Cellar/opencv/4.5.1_2/lib/cmake/opencv4)
 find_package(OpenCV REQUIRED)
 find_package(Threads REQUIRED)
 

@@ -20,7 +20,7 @@ configure_file(${CMAKE_SOURCE_DIR}/shader.frag ${CMAKE_BINARY_DIR}/shader.frag C
 add_executable( ${PROJECT_NAME} 
     main.cpp 
     stb_image_wrap.cpp # 这个文件是为了编译 std_image.h 中的文件而加的
-    ../glad/glad.c
+    ../glad.c.4.1/glad.c
 )
 
 # 这里额外增加一个 libdl.so 的路径，否则编译时有时会出现 glad.c 相关的一个错误。也可以直接用 -ldl

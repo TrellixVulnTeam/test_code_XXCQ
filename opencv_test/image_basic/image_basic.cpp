@@ -93,9 +93,9 @@ int main(int argc, char const* argv[])
     }
     std::cout << "Image Type:" << cvMatType2Str(src.type()) << std::endl;
 
-
-    // cv::Mat gray = convertUshortToGrey(src);
-    // cv::imwrite("gray.png", gray);
+    cv::Mat gray = convertUshortToGrey(src);
+    std::string outputFile(argv[1]);
+    cv::imwrite(outputFile, gray);
 
     //----------------------------------------------------
     // Test cv::Rect

@@ -269,7 +269,7 @@ void keyPressCallBack(GLFWwindow* window, int key, int scancode, int action, int
 void processInputFast(GLFWwindow* window)
 {
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        g_myCamera.processTranslation(Camera::ModelViewMode::MOVE_Z, kKeyboardMovingSpeed); 
+        g_myCamera.processTranslation(Camera::ModelViewMode::MOVE_Z, kKeyboardMovingSpeed);
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
         g_myCamera.processTranslation(Camera::ModelViewMode::MOVE_Z, -kKeyboardMovingSpeed);
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
